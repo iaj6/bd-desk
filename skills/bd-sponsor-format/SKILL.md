@@ -10,9 +10,9 @@ This is prep + lead-gen: the portfolio enumeration is the payload. Produce:
 # Sponsor Profile — <Fund>
 
 1. **Snapshot** — what the fund is, size / AUM / fund count, HQ, founded, focus.
-2. **Logistics thesis** — why they invest in transportation/logistics/supply-chain; the
+2. **Vertical thesis** — why they invest in the ICP's space (see the brand canon); the
    pattern they repeat.
-3. **Portfolio** — EVERY current logistics / supply-chain / cold-chain portco you can
+3. **Portfolio** — EVERY current portco in the ICP's space you can
    find (platforms + add-ons). For each: a one-liner, a fit note vs the ICP in the brand canon, and
    **flag with `→ ADD` the ones worth adding as pipeline targets**. Be thorough; name portcos
    even if not widely known.
@@ -20,8 +20,8 @@ This is prep + lead-gen: the portfolio enumeration is the payload. Produce:
    months, with sources.
 5. **Co-investors / lenders** — who they partner with (each is another sponsor cluster
    worth mapping).
-6. **The play** — one line: how the offer templates across this fund's logistics book,
-   and the sharpest angle for the outreach to the named partner.
+6. **The play** — one line: how the offer templates across this fund's book in the
+   ICP's space, and the sharpest angle for the outreach to the named partner.
 
 Grounding: cite sources inline; mark anything you can't verify "unverified".
 

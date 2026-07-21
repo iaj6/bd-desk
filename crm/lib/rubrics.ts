@@ -3,7 +3,7 @@
 // to MAX_ITERATIONS) if criteria aren't met; the verdict lands on
 // session.outcome_evaluations, which finalizeResearch copies onto the target.
 //
-// KEEP IN SYNC with managed_agents/agents/rubrics/*.md (source of truth). The CRM
+// KEEP IN SYNC with agents/rubrics/*.md at the repo root (source of truth). The CRM
 // deploys from crm/ alone, so it can't read those files at runtime — this is the
 // one deliberate duplication.
 
@@ -21,15 +21,15 @@ The dossier passes when ALL of the following hold:
    section is explicitly justified as having nothing real to report. No padded or
    filler sections.
 2. **Fit score leads and is argued** — the dossier opens with Strong / Worth a look /
-   Skip plus reasoning tied to the ICP in the system prompt (regulated logistics,
-   PE ownership, mid-market size, cloud-but-no-data-team). A "Strong" with no
-   concrete GREEN signals cited fails this.
+   Skip plus reasoning tied to the ICP in the system prompt (its GREEN signals and
+   RED flags, not generic attractiveness). A "Strong" with no concrete GREEN
+   signals cited fails this.
 3. **Grounded** — recent signals carry source URLs; claims about the company trace
    to something the agent actually found this session, not general knowledge;
    anything not verified is marked "unverified". Invented facts, invented people,
    or constructed/guessed LinkedIn URLs fail this outright.
-4. **Skeptical, not salesy** — "Where we fit" names a specific, plausible grind
-   (spreadsheet bottleneck / RFP fatigue / audit exposure / shadow-AI risk). If the
+4. **Skeptical, not salesy** — "Where we fit" names a specific, plausible grind the
+   ICP actually has (drawn from the offer and pains in the system prompt). If the
    fit is weak, the dossier says so plainly instead of stretching.
 5. **Machine block valid** — the output ends with a \`<people>[…]</people>\` JSON
    array (possibly empty), valid JSON, nothing after the closing tag; each person
@@ -51,21 +51,21 @@ payload.
 
 The profile passes when ALL of the following hold:
 
-1. **Complete** — the six sections are present (Snapshot, Logistics thesis,
+1. **Complete** — the six sections are present (Snapshot, Vertical thesis,
    Portfolio, Recent activity, Co-investors / lenders, The play), or a missing
    section is explicitly justified. No filler.
-2. **Portfolio is thorough and scored** — the logistics / supply-chain / cold-chain
-   portcos found are enumerated (platforms AND add-ons), each with a one-liner and
+2. **Portfolio is thorough and scored** — the portcos found in the ICP's space are
+   enumerated (platforms AND add-ons), each with a one-liner and
    a fit note against the ICP in the system prompt, and the ones worth pursuing are
    flagged \`→ ADD\`. An obviously thin portfolio section (one or two well-known
-   names for a fund with a stated logistics thesis) needs revision.
+   names for a fund with a stated thesis in the space) needs revision.
 3. **Grounded** — recent activity carries source URLs and dates; portcos and deals
    trace to something the agent actually found this session; anything unverified is
    marked "unverified". Invented portcos, invented partners, or constructed
    LinkedIn URLs fail outright.
 4. **The play is specific** — one line on how the offer templates across THIS
-   fund's logistics book and the sharpest angle for the named partner. Generic
-   filler fails.
+   fund's book in the ICP's space and the sharpest angle for the named partner.
+   Generic filler fails.
 5. **Machine blocks valid** — the output ends with a \`<people>[…]</people>\` JSON
    array followed by a \`<portcos>[…]</portcos>\` JSON array, both valid JSON with
    nothing after the closing tags. Every \`→ ADD\` portco from the Portfolio section

@@ -10,15 +10,15 @@ The dossier passes when ALL of the following hold:
    section is explicitly justified as having nothing real to report. No padded or
    filler sections.
 2. **Fit score leads and is argued** — the dossier opens with Strong / Worth a look /
-   Skip plus reasoning tied to the ICP in the system prompt (regulated logistics,
-   PE ownership, mid-market size, cloud-but-no-data-team). A "Strong" with no
-   concrete GREEN signals cited fails this.
+   Skip plus reasoning tied to the ICP in the system prompt (its GREEN signals and
+   RED flags, not generic attractiveness). A "Strong" with no concrete GREEN
+   signals cited fails this.
 3. **Grounded** — recent signals carry source URLs; claims about the company trace
    to something the agent actually found this session, not general knowledge;
    anything not verified is marked "unverified". Invented facts, invented people,
    or constructed/guessed LinkedIn URLs fail this outright.
-4. **Skeptical, not salesy** — "Where we fit" names a specific, plausible grind
-   (spreadsheet bottleneck / RFP fatigue / audit exposure / shadow-AI risk). If the
+4. **Skeptical, not salesy** — "Where we fit" names a specific, plausible grind the
+   ICP actually has (drawn from the offer and pains in the system prompt). If the
    fit is weak, the dossier says so plainly instead of stretching.
 5. **Machine block valid** — the output ends with a `<people>[…]</people>` JSON
    array (possibly empty), valid JSON, nothing after the closing tag; each person

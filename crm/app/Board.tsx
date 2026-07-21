@@ -334,7 +334,7 @@ function Drawer({
                   <tr key={i}>
                     <td className="pname">
                       {p.name}
-                      {p.linkedin && (
+                      {p.linkedin && /^https?:\/\//i.test(p.linkedin) && (
                         <> · <a href={p.linkedin} target="_blank" rel="noreferrer">in↗</a></>
                       )}
                     </td>
@@ -346,7 +346,7 @@ function Drawer({
           </section>
         ) : null}
         {target.sources?.length ? (
-          <section><h3>Sources</h3><ul className="srcs">{target.sources.map((s, i) => <li key={i}><a href={s} target="_blank" rel="noreferrer">{s}</a></li>)}</ul></section>
+          <section><h3>Sources</h3><ul className="srcs">{target.sources.map((s, i) => <li key={i}>{/^https?:\/\//i.test(s) ? <a href={s} target="_blank" rel="noreferrer">{s}</a> : s}</li>)}</ul></section>
         ) : null}
 
         <div className="edit">

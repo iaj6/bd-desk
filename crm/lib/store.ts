@@ -18,8 +18,8 @@ export interface Person {
 
 // A content seed: a specifically-true observation from a real account (a "why now"
 // trigger, an objection that landed, a reply-worthy hook) worth turning into a post.
-// Stored raw + account-linked here; de-identified only when harvested into the content
-// system (see managed_agents/src/content-harvest.ts). Never let a raw seed leave the CRM.
+// Stored raw + account-linked here; de-identify before anything leaves the CRM for a
+// public channel. Never let a raw seed leave the CRM.
 export type SeedSource = "dossier" | "reply" | "radar" | "manual";
 export interface ContentSeed {
   note: string;
@@ -106,14 +106,18 @@ export async function listTargets(): Promise<Target[]> {
   );
 }
 
-// Upsert by slug. Preserves human-set fields (status) across re-sends from the agent.
+// Upsert by slug. A re-send may refresh sourced fields (fit, signals, sources, …)
+// but never clobbers the human-owned EDITABLE fields on an existing record.
 export async function upsertTarget(input: Partial<Target> & { company: string }): Promise<Target> {
-  const slug = input.slug || slugify(input.company);
+  // Callers may pass a slug; re-slugify it so caller input can never shape blob keys.
+  const slug = slugify(input.slug || input.company);
   const existing = await readOne(slug);
   const now = new Date().toISOString();
+  const sourced: Partial<Target> = { ...input };
+  if (existing) for (const k of EDITABLE) delete (sourced as Record<string, unknown>)[k];
   const merged: Target = {
     ...existing,
-    ...input,
+    ...sourced,
     slug,
     company: input.company,
     status: existing?.status ?? "new", // never let a re-send reset human triage state

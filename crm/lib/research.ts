@@ -34,7 +34,7 @@ export async function startResearch(
   const isContact = t.kind === "contact";
   const agentId = isContact && SPONSOR_AGENT_ID ? SPONSOR_AGENT_ID : AGENT_ID;
   const prompt = isContact
-    ? `Profile the PE sponsor "${t.company}" for the operating-partner outreach play. We want to reach ${t.contact_name}${t.contact_title ? `, ${t.contact_title}` : ""}. Map their full logistics/supply-chain portfolio (flag portcos worth adding as pipeline targets), recent deals, co-investors, and the key partners.`
+    ? `Profile the PE sponsor "${t.company}" for the operating-partner outreach play. We want to reach ${t.contact_name}${t.contact_title ? `, ${t.contact_title}` : ""}. Map their full portfolio in our ICP's space (flag portcos worth adding as pipeline targets), recent deals, co-investors, and the key partners.`
     : `Build a BD dossier on: ${t.company}${t.sponsor ? ` (PE sponsor: ${t.sponsor})` : ""}${t.hq ? `, HQ ${t.hq}` : ""}.`;
 
   try {
@@ -134,12 +134,13 @@ const PORTCO_FITS = new Set(["Strong", "Worth a look"]);
 
 // Duplicate detection has to survive name variants — an acronym form and the
 // spelled-out company name slugify differently (observed in prod). Compare
-// distinctive-token SETS: strip generic industry words, then treat subset/equality as a
+// distinctive-token SETS: strip generic corporate words, then treat subset/equality as a
 // match. Biased toward skipping — a false skip costs a mention, a false add costs
-// research sessions and duplicate outreach.
+// research sessions and duplicate outreach. Extend this set with the filler words
+// common in YOUR vertical's company names (e.g. "logistics freight" for supply chain).
 const GENERIC = new Set(
-  ("logistics transportation transport warehousing warehouse freight systems services service solutions " +
-    "distribution delivery group holdings company co inc llc lp corp corporation the and of").split(" "),
+  ("systems services service solutions industries international national global partners " +
+    "distribution group holdings holding company co inc llc lp corp corporation the and of").split(" "),
 );
 function nameTokens(company: string): Set<string> {
   const all = (company.toLowerCase().match(/[a-z0-9]+/g) ?? []).filter((w) => w.length >= 2);

@@ -188,7 +188,7 @@ const handler = createMcpHandler(
 
     server.tool(
       "crm_capture_seed",
-      "Reverse flywheel: flag a post-worthy observation from a real account (a 'why now' trigger, an objection that landed, a reply-worthy hook) onto a target. Stored raw + account-linked; it is de-identified only later, when `npm run content-harvest` sweeps seeds into the content system. Capture the pattern the moment it shows up in a dossier or reply.",
+      "Reverse flywheel: flag a post-worthy observation from a real account (a 'why now' trigger, an objection that landed, a reply-worthy hook) onto a target. Stored raw + account-linked; de-identify before it leaves the CRM for any public channel. Capture the pattern the moment it shows up in a dossier or reply.",
       {
         slug: z.string().describe("The target the observation came from"),
         note: z.string().describe("The observation, in your words — the specific, true thing worth turning into content"),

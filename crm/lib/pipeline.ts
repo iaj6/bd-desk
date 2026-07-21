@@ -129,6 +129,14 @@ export function renderBrief(r: PipelineReport, crmUrl: string): { subject: strin
   const n = (xs: unknown[]) => xs.length;
   const subject = `Pipeline overnight — ${n(r.drafted)} drafted, ${n(r.finalized)} researched, ${n(r.followupsDue)} follow-ups due`;
 
+  // Company names, slugs, and error text originate from agent web research and
+  // upstream APIs — hostile input as far as this email is concerned. Escape
+  // everything interpolated into markup so nothing can inject HTML into the inbox.
+  const esc = (s: unknown) =>
+    String(s ?? "").replace(/[&<>"']/g, (c) =>
+      ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]!,
+    );
+  const href = /^https?:\/\//i.test(crmUrl) ? esc(crmUrl) : "#";
   const li = (s: string) => `<li>${s}</li>`;
   const section = (title: string, items: string[], empty: string) =>
     `<h3 style="margin:16px 0 4px">${title}</h3>` +
@@ -137,19 +145,19 @@ export function renderBrief(r: PipelineReport, crmUrl: string): { subject: strin
   const html = [
     `<div style="font-family:sans-serif;max-width:640px">`,
     `<h2 style="margin:0 0 8px">Overnight report — ${date}</h2>`,
-    `<p style="margin:0 0 12px"><a href="${crmUrl}">Open the CRM</a></p>`,
+    `<p style="margin:0 0 12px"><a href="${href}">Open the CRM</a></p>`,
     section("✍️ Drafts ready for your review", r.drafted.map((d) =>
-      li(`<a href="${crmUrl}">${d.slug}</a> — ${d.channels.join(" + ")}`)), "No new drafts."),
-    section("📄 Research completed", r.finalized.map((s) => li(s)), "None finished overnight."),
-    section("🔬 Research started (attaches next run)", r.started.map((s) => li(s)), "Nothing new to research."),
+      li(`<a href="${href}">${esc(d.slug)}</a> — ${esc(d.channels.join(" + "))}`)), "No new drafts."),
+    section("📄 Research completed", r.finalized.map((s) => li(esc(s))), "None finished overnight."),
+    section("🔬 Research started (attaches next run)", r.started.map((s) => li(esc(s))), "Nothing new to research."),
     section("⏰ Follow-ups due", r.followupsDue.map((f) =>
-      li(`<b>${f.company}</b> — due ${f.follow_up} (${f.status})`)), "Nothing due. Clear runway."),
+      li(`<b>${esc(f.company)}</b> — due ${esc(f.follow_up)} (${esc(f.status)})`)), "Nothing due. Clear runway."),
     section("🆕 New targets (last 24h)", r.newTargets.map((t) =>
-      li(`<b>${t.company}</b>${t.fit ? ` — ${t.fit}` : ""}`)), "Radar added nothing new."),
+      li(`<b>${esc(t.company)}</b>${t.fit ? ` — ${esc(t.fit)}` : ""}`)), "Radar added nothing new."),
     section("👀 Researched + drafted, awaiting your triage", r.readyForReview.map((t) =>
-      li(`<b>${t.company}</b>${t.fit ? ` — ${t.fit}` : ""}`)), "Queue is clear."),
+      li(`<b>${esc(t.company)}</b>${t.fit ? ` — ${esc(t.fit)}` : ""}`)), "Queue is clear."),
     r.errors.length
-      ? section("⚠️ Errors", r.errors.map((e) => li(`${e.slug} [${e.step}]: ${e.message}`)), "")
+      ? section("⚠️ Errors", r.errors.map((e) => li(`${esc(e.slug)} [${esc(e.step)}]: ${esc(e.message)}`)), "")
       : "",
     `<p style="color:#999;font-size:12px;margin-top:20px">Nightly pipeline: research + drafts only — nothing is ever sent without you.</p>`,
     `</div>`,

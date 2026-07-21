@@ -5,7 +5,7 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 // POST auth (bearer INGEST_TOKEN) is enforced in middleware; GET is behind Basic Auth.
-// The brand-pack compiler in managed_agents POSTs the compiled canon here.
+// The repo's brand-pack compiler (`npm run brand-pack`) POSTs the compiled canon here.
 export async function GET() {
   const pack = await getBrandPack();
   return pack ? NextResponse.json(pack) : NextResponse.json({ error: "no pack yet" }, { status: 404 });

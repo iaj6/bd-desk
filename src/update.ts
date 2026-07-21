@@ -10,7 +10,7 @@ import Anthropic from "@anthropic-ai/sdk";
 import { readFileSync, writeFileSync, existsSync } from "node:fs";
 import { withCanon, renderVars, type Consumer } from "./canon.ts";
 
-// Load managed_agents/.env if present so ANTHROPIC_API_KEY is picked up automatically.
+// Load the repo's .env if present so ANTHROPIC_API_KEY is picked up automatically.
 try {
   if (existsSync(".env")) process.loadEnvFile(".env");
 } catch {

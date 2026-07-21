@@ -22,10 +22,10 @@ The store is your shared brain across runs:
    several angles, preferring sponsors **not already connected** to mapped ones (so
    coverage reaches new regions, not just neighbors):
    - co-investors / competitors of sponsors already in `_done.md`,
-   - **cert directories** (TAPA, CEIV Pharma, GDP carrier lists) → find regulated
-     carriers → who owns them,
-   - recent logistics **recap / M&A** news (last ~6 months),
-   - logistics/supply-chain–focused PE firm lists.
+   - **cert / registry directories** for the ICP's regulated posture (the
+     certifications named in the brand canon) → find certified operators → who owns them,
+   - recent **recap / M&A** news in the ICP's vertical (last ~6 months),
+   - PE firm lists focused on the ICP's vertical.
 3. **Pop** the next 2–3 sponsors from the top of `_frontier.md` and **delegate each to
    your Sponsor Mapper sub-agent — one thread per sponsor, launched in parallel**. Each
    delegation prompt: the sponsor name plus whatever memory already knows about it (a
