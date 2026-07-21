@@ -1,0 +1,37 @@
+{
+  "name": "bd-desk",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "An end-to-end BD pipeline on Claude Managed Agents — lead sourcing, research, drafting, and a lightweight CRM. Research-and-draft only; a human always sends.",
+  "scripts": {
+    "brand-pack": "tsx src/brand-pack.ts",
+    "setup": "tsx src/setup.ts",
+    "setup-sponsor": "tsx src/setup-sponsor.ts",
+    "setup-radar": "tsx src/setup-radar.ts",
+    "setup-digest": "tsx src/setup-digest.ts",
+    "setup-vault": "tsx src/setup-vault.ts",
+    "setup-mcp": "tsx src/setup-mcp.ts",
+    "setup-skills": "tsx src/setup-skills.ts",
+    "setup-multiagent": "tsx src/setup-multiagent.ts",
+    "update": "tsx src/update.ts",
+    "dossier": "tsx src/dossier.ts",
+    "radar": "tsx src/radar.ts",
+    "deploy-radar": "tsx src/deploy-radar.ts",
+    "radar-fire": "tsx src/radar-fire.ts",
+    "radar-runs": "tsx src/radar-runs.ts",
+    "deploy-digest": "tsx src/deploy-digest.ts",
+    "digest-fire": "tsx src/digest-fire.ts",
+    "eval": "tsx src/eval.ts",
+    "dream": "tsx src/dream.ts"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.112.3",
+    "yaml": "^2.9.0"
+  },
+  "devDependencies": {
+    "@types/node": "^26.1.1",
+    "tsx": "^4.19.0",
+    "typescript": "^5.6.0"
+  }
+}
