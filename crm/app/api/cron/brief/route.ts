@@ -1,0 +1,29 @@
+import { NextResponse } from "next/server";
+import { runPipeline, renderBrief } from "@/lib/pipeline";
+
+export const runtime = "nodejs";
+export const maxDuration = 300;
+export const dynamic = "force-dynamic";
+
+// Morning run (auth: CRON_SECRET bearer, enforced in middleware). Same idempotent
+// pipeline — it finalizes the research the overnight run started and drafts its
+// outreach — then emails the morning brief via Resend.
+export async function GET() {
+  const report = await runPipeline();
+
+  const to = process.env.BRIEF_EMAIL;
+  const key = process.env.RESEND_API_KEY;
+  let email: string = "skipped (BRIEF_EMAIL / RESEND_API_KEY unset)";
+  if (to && key) {
+    const crmUrl = process.env.CRM_PUBLIC_URL ?? "";
+    const { subject, html } = renderBrief(report, crmUrl);
+    const res = await fetch("https://api.resend.com/emails", {
+      method: "POST",
+      headers: { authorization: `Bearer ${key}`, "content-type": "application/json" },
+      body: JSON.stringify({ from: process.env.EMAIL_FROM ?? "BD Desk <onboarding@resend.dev>", to: [to], subject, html }),
+    });
+    email = res.ok ? `sent: ${((await res.json()) as { id?: string }).id}` : `failed: ${res.status} ${await res.text()}`;
+  }
+
+  return NextResponse.json({ ...report, email });
+}

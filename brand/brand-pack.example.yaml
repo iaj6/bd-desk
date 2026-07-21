@@ -1,0 +1,151 @@
+# Brand pack — the ONE source of truth for who you are, what you sell, and who you
+# sell it to. Everything downstream (agent prompts, outreach drafting, fit scoring)
+# is compiled from this file by `npm run brand-pack`.
+#
+# This example describes RIDGELINE DATA CO., a fictional solo consultancy, so the
+# whole pipeline runs out of the box. To make it yours:
+#
+#   cp brand/brand-pack.example.yaml brand/brand-pack.yaml   # gitignored — stays private
+#   <edit every field>
+#   npm run brand-pack
+#
+# Write it for the model: concrete, true, and opinionated. Vague positioning in →
+# vague dossiers and mushy outreach out.
+
+version: 1
+
+identity:
+  name: Ridgeline Data Co.
+  abbr: RDC
+  founder: Alex Rivera
+  one_liner_public: >
+    I turn the spreadsheets and audit binders that run mid-market food manufacturing
+    into data your own team can query in plain English.
+  one_liner_vertical: >
+    I turn the two grinds that bottleneck regulated food & beverage manufacturers —
+    production/yield data trapped in one analyst's spreadsheets, and audit/compliance
+    documentation done by hand — into AI your people can query in plain English,
+    deployed inside your own cloud so recipes and costs never leave.
+  what_we_are: >
+    A solo/boutique AI + operational-data consultancy for regulated food & beverage
+    manufacturing.
+  offer: >
+    Turn the two grinds that bottleneck regulated food & bev ops —
+    (1) production, yield, and cost data trapped in one analyst's spreadsheets, and
+    (2) deadline-driven audit, certification, and customer-compliance paperwork —
+    into AI the client's own people can query in plain English, built INSIDE the
+    client's own cloud account, with zero data retention and a human reviewing
+    every output. Covers both halves: the data engineering that makes the numbers
+    trustworthy AND the AI layer on top.
+
+positioning:
+  differentiators:
+    - name: In your cloud, recipes never leave
+      claim: >
+        The whole stack runs inside the client's own cloud tenant on managed
+        services — nothing leaves their account, zero data retention. This is the
+        move that gets past the food-safety and IP objections where every SaaS
+        tool dies.
+    - name: A productivity multiplier, not autopilot
+      claim: >
+        Human-in-the-loop at every stage. The AI drafts, reconciles, and checks;
+        their people review, steer, and sign off. Built for regulated work where a
+        recall is on you, not the tool.
+    - name: Ships fast on managed services
+      claim: >
+        A scoped, working result on their real data against a real deadline — not a
+        multi-quarter platform build to babysit.
+    - name: Covers both halves
+      claim: >
+        The data engineering that makes production and quality data trustworthy AND
+        the AI layer on top — one accountable builder instead of two vendors who
+        blame each other.
+
+voice:
+  summary: >
+    Practitioner-first, direct, anti-hype. The reader is a skeptical plant manager or
+    PE operator who distrusts buzzwords. Talk from the floor, not the keynote stage:
+    real failure modes, real tradeoffs, real decisions. Confident but honest about
+    uncertainty. Ground every claim in something real; mark anything unverified as
+    "unverified."
+  words_we_use:
+    - build, ship, design, assess, implement
+    - real-world, practical, applied
+    - guardrails, tradeoffs, failure modes
+    - traceability, audit-ready
+  never_use:
+    - leverage
+    - transform / transformative
+    - synergy / synergize / seamless
+    - cutting-edge / revolutionize / revolutionary / game-changing
+    - end-to-end automation, or AI-does-it-for-you (contradicts human-in-the-loop)
+    - unlock / empower
+    - AI-powered (overused to meaninglessness)
+    - best-in-class / world-class / enterprise-grade
+    - journey / ecosystem (unless literally about ecosystems)
+    - We-help-companies… phrasing (too generic — say what we actually do)
+
+proof_stories:
+  - id: copacker-pilot
+    headline: Delivered and running in production for a PE-owned specialty co-packer.
+    detail: >
+      A yield-and-waste reconciliation pipeline (ERP extracts → cleaned lot-level
+      data → plain-English Q&A for the ops team) plus a customer-audit document
+      assistant, built entirely inside their cloud account, zero retention,
+      human-in-the-loop. Survived an SQF audit cycle and a customer compliance
+      review on a hard deadline.
+    proves: [in-your-cloud, both-halves, ships-fast]
+
+icp:
+  summary: >
+    Regulated, mid-market, PE-owned / PE-sponsor-backed food & beverage
+    manufacturers and co-packers: specialty food, beverage, ingredients,
+    nutraceutical, pet food. ~$30M–$500M revenue, ~100–2,000 employees. Running an
+    ERP/MES, but the analytical/knowledge layer is manual (Excel + shared drives).
+    No in-house data-engineering or ML bench. Strong "our recipes and costs can't
+    leave" posture.
+  green_signals:
+    - PE ownership (note the sponsor) — especially a new owner with a margin-improvement
+      or data-driven-ops value-creation mandate.
+    - Regulated posture / certs — FDA registered, FSMA, SQF, BRCGS, HACCP, organic/
+      kosher/halal certifications, USDA.
+    - Hiring analysts (yield, cost, quality, supply planning) and document-control/QA
+      roles, but NO data-engineer or ML reqs. They hire analysts, not infra — this is
+      the tell.
+    - Timing triggers — an upcoming SQF/BRCGS or major customer audit; a recall or
+      near-miss; an ERP/MES migration; a roll-up merging two quality or data systems;
+      an approaching exit needing a margin story; a stalled we-tried-ChatGPT-and-
+      legal-killed-it pilot; key-analyst flight risk.
+    - On a major cloud + modernizing, but no data team.
+  red_flags:
+    - Large, tech-mature org with an in-house data/ML team (they out-resource a
+      boutique).
+    - A direct competitor — anyone selling AI/data consulting into food & bev ops.
+    - No regulatory exposure and no proprietary-recipe sensitivity (the core wedge
+      doesn't bite).
+    - Pre-revenue, micro, or a pure brand company that outsources all manufacturing.
+  personas:
+    - name: Ops / Plant leader
+      role: The in-the-weeds champion / wedge.
+      owns: "A number: yield, waste, OEE, schedule attainment, cost per unit."
+      authority: Can greenlight a $25K–$75K pilot.
+      lead_with: Their worst reporting grind + the single-point-of-failure analyst
+        (what happens when Dana goes on PTO?).
+    - name: PE-backed exec / operating partner
+      role: The budget / mandate buyer.
+      owns: EBITDA on a hold-period clock; the board date on the value-creation plan;
+        (operating partner) a repeatable pattern across portcos.
+      authority: Sets the mandate and the budget.
+      lead_with: The margin line item they personally own and what survives at exit.
+    - name: Quality / Food Safety leader
+      role: The audit-and-defensibility owner.
+      owns: Traceability, the audit trail, mock recalls, defensibility to auditors and
+        customers.
+      authority: Can kill OR bless a project.
+      lead_with: Traceability, documentation burden, and human sign-off.
+  targeting_strategy: >
+    Hunt the ICP as a GRAPH WALK over PE sponsors, not company-by-company. A PE
+    sponsor with a food & beverage / consumer-manufacturing thesis is a cluster
+    generator: one sponsor = many portcos already pre-filtered for "PE-owned +
+    manufacturing," and the sponsor relationship is also the sales unit (land one
+    portco → warm intros to the rest). Companies are leaves; sponsors are hubs.

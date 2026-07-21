@@ -1,0 +1,22 @@
+{
+  "$comment": "Offline eval tasks — side-effect-free agents only (dossier, sponsor). The radar is NOT here: it writes to the real memory store and CRM, so it's graded live by the rubric on its weekly deployment instead. REPLACE the <placeholders> with real companies from YOUR ICP before running: one you expect to score Strong, one you expect to be a Skip (a company that pattern-matches your vertical but trips a RED flag), and one PE sponsor active in your space. Keep ids stable so baseline comparisons stay meaningful. `expect.fit` is an optional deterministic assertion on the dossier's leading fit score.",
+  "tasks": [
+    {
+      "id": "dossier-known-strong",
+      "agent": "dossier",
+      "prompt": "Build a BD dossier on: <a company you know fits your ICP> (PE sponsor: <its sponsor, if known>)",
+      "expect": { "fit": "Strong" }
+    },
+    {
+      "id": "dossier-known-red",
+      "agent": "dossier",
+      "prompt": "Build a BD dossier on: <a company in your vertical that trips a RED flag>",
+      "expect": { "fit": "Skip" }
+    },
+    {
+      "id": "sponsor-example",
+      "agent": "sponsor",
+      "prompt": "Profile the PE sponsor \"<a PE firm with a thesis in your vertical>\" for the operating-partner outreach play. Map their full portfolio in your ICP's space (flag portcos worth adding as pipeline targets), recent deals, co-investors, and the key partners."
+    }
+  ]
+}

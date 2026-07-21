@@ -1,0 +1,25 @@
+{
+  "name": "bd-desk-crm",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.109.0",
+    "@vercel/blob": "^2.5.0",
+    "mcp-handler": "^1.1.0",
+    "next": "latest",
+    "react": "latest",
+    "react-dom": "latest",
+    "zod": "^4.4.3"
+  },
+  "devDependencies": {
+    "@types/node": "latest",
+    "@types/react": "latest",
+    "@types/react-dom": "latest",
+    "typescript": "latest"
+  }
+}

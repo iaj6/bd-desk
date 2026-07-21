@@ -1,0 +1,17 @@
+node_modules/
+.env
+.env.local
+.DS_Store
+
+# provisioned resource ids — yours, not the repo's
+.managed-agents.json
+
+# your private brand canon (start from brand/brand-pack.example.yaml)
+brand/brand-pack.yaml
+agents/_canon.json
+
+# run outputs
+dossiers/
+radar-runs/
+evals/runs/
+evals/baseline.json
