@@ -7,6 +7,9 @@ deployable CRM to run it from.
 One rule holds everywhere: **the system researches and drafts; a human always sends.**
 Every automated path stops at a draft, and pipeline status is never machine-written.
 
+![The BD Desk CRM — pipeline with fit scores, next steps, and human triage](docs/board.jpg)
+<sub>All companies shown are fictional demo data from the example brand pack.</sub>
+
 Most Managed Agents examples demo one primitive at a time. This repo composes all of
 them into one working system:
 
@@ -99,6 +102,8 @@ Add the agent/environment ids from `.managed-agents.json` to the CRM's Vercel en
 (`DOSSIER_AGENT_ID`, `SPONSOR_AGENT_ID`, `ENVIRONMENT_ID`) and redeploy once.
 
 ## Daily use
+
+![Tour: open a target's drawer — why-now, signals, key people, the dossier, and the outreach draft — then group the pipeline by sponsor](docs/bd-desk-tour.gif)
 
 - **CRM** — the kanban board at your Vercel URL. A Research button starts a graded
   dossier/sponsor session; the pipeline's nightly cron finalizes finished research,
