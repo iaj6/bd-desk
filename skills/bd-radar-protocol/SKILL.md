@@ -68,6 +68,10 @@ out-of-ICP nodes — those stay in memory for dedup only.
 
 ## Sweep report format
 - One-line tally: "Mapped sponsor(s): X. N net-new targets carded. Frontier now: M sponsors."
+- **Why the sweep stopped** — one line, every sweep: "budget — mapped the per-sweep
+  2–3, frontier still has M queued" or "frontier drained → monitoring mode (N new
+  nodes)" or "blocked: <what went wrong>". Never let the report imply the territory
+  is exhausted when the sweep just hit its budget.
 - Ranked (best-fit first) net-new targets: **Company** + **sponsor** + HQ · **Fit**
   (+ which GREEN signals) · **Why now** (trigger) · **Entry persona** · **Sources** (URLs).
 - The current `_frontier.md` contents (so the human sees what's queued next).

@@ -107,15 +107,25 @@ export async function finalizeResearch(target: Target): Promise<Target | null> {
   // sponsor profile → new targets the nightly pipeline researches on its own). New
   // slugs only — a portco mention is weaker signal than an existing record, so it
   // never overwrites anything already in the CRM.
+  let portcoReceipt = "";
   const pcm = brief.match(/<portcos>([\s\S]*?)<\/portcos>/i);
   if (pcm) {
     try {
       const arr = JSON.parse(pcm[1].replace(/```json|```/g, "").trim());
-      if (Array.isArray(arr)) await addPortcos(arr);
+      if (Array.isArray(arr)) {
+        const { added, capped } = await addPortcos(arr);
+        // No silent caps: the profile itself records what the auto-add did, so a
+        // fund with 12 qualifying portcos never reads identically to one with 8.
+        portcoReceipt =
+          `\n\n---\n*Auto-add receipt: ${added} portco${added === 1 ? "" : "s"} added to the pipeline` +
+          (capped > 0
+            ? `; ${capped} more qualified but hit the per-profile cap (${PORTCO_CAP}) — add them manually from the Portfolio section if wanted.*`
+            : `.*`);
+      }
     } catch {
       /* malformed block → skip auto-add, keep the brief */
     }
-    brief = brief.replace(pcm[0], "").trim();
+    brief = brief.replace(pcm[0], "").trim() + portcoReceipt;
   }
 
   // Copy the platform grader's verdict onto the target (last completed evaluation).
@@ -149,11 +159,14 @@ function nameTokens(company: string): Set<string> {
 }
 const isSubset = (a: Set<string>, b: Set<string>) => [...a].every((x) => b.has(x));
 
-async function addPortcos(arr: unknown[]): Promise<void> {
+// Returns the add/drop tally so the caller can receipt it — qualified portcos past
+// the cap are counted, never silently discarded.
+async function addPortcos(arr: unknown[]): Promise<{ added: number; capped: number }> {
   const existing = (await listTargets()).map((t) => nameTokens(t.company));
   let budget = PORTCO_CAP;
+  let added = 0;
+  let capped = 0;
   for (const raw of arr) {
-    if (budget <= 0) break;
     const p = raw as Record<string, unknown>;
     if (!p || typeof p.company !== "string" || !p.company.trim()) continue;
     if (typeof p.fit !== "string" || !PORTCO_FITS.has(p.fit)) continue;
@@ -161,6 +174,10 @@ async function addPortcos(arr: unknown[]): Promise<void> {
     if (await readOneBySlug(slug)) continue; // exact match → leave the curated record alone
     const tokens = nameTokens(p.company);
     if (existing.some((e) => isSubset(tokens, e) || isSubset(e, tokens))) continue; // name variant of an existing target
+    if (budget <= 0) {
+      capped++; // would have been added — count it so the receipt can say so
+      continue;
+    }
     existing.push(tokens); // dedupe within this batch too
     // Whitelist sourced fields; ignore anything else the agent emitted.
     await upsertTarget({
@@ -176,7 +193,9 @@ async function addPortcos(arr: unknown[]): Promise<void> {
       ...(Array.isArray(p.sources) ? { sources: p.sources.filter((s) => typeof s === "string") } : {}),
     });
     budget--;
+    added++;
   }
+  return { added, capped };
 }
 
 // Attach any stuck research whose session has since finished. Called on CRM page load.

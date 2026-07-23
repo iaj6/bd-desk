@@ -15,7 +15,10 @@ The sweep passes when ALL of the following hold:
    and RED/skip companies recorded with a one-line reason so they are not
    re-surfaced later.
 3. **Report complete** — the tally line ("Mapped sponsor(s): X. N net-new targets
-   carded. Frontier now: M sponsors."); ranked net-new targets each with sponsor,
+   carded. Frontier now: M sponsors."); a stop reason (budget with the frontier
+   still queued, frontier drained → monitoring mode, or blocked and why) — a
+   report that reads as exhaustive when the sweep merely spent its budget fails
+   this; ranked net-new targets each with sponsor,
    HQ, fit + the specific GREEN signals, a why-now trigger, entry persona, and
    source URLs; the current frontier contents; the list of files written/updated.
 4. **Grounded** — every carded target's fit cites specific GREEN signals with
