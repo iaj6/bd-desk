@@ -32,7 +32,7 @@ const CSV_COLUMNS: [string, (t: Target) => unknown][] = [
   ["entry_persona", (t) => t.entry_persona],
   ["green_signals", (t) => t.green_signals?.join("; ")],
   ["sources", (t) => t.sources?.join(" ")],
-  ["people", (t) => t.people?.map((p) => p.name).join("; ")],
+  ["people", (t) => t.people?.map((p) => (p.title ? `${p.name} (${p.title})` : p.name)).join("; ")],
   ["grade", (t) => t.grade],
   ["has_dossier", (t) => Boolean(t.dossier)],
   ["has_outreach", (t) => Boolean(t.outreach || t.linkedin_note)],
@@ -45,6 +45,25 @@ export function targetsToCsv(targets: Target[]): string {
   const header = CSV_COLUMNS.map(([name]) => name).join(",");
   const rows = targets.map((t) => CSV_COLUMNS.map(([, get]) => csvCell(get(t))).join(","));
   return [header, ...rows].join("\r\n") + "\r\n";
+}
+
+// The rolodex view: one row per PERSON across the pipeline — contact-kind targets
+// contribute themselves, company targets contribute their research-extracted people.
+// This is the export for building an outreach list.
+const PEOPLE_COLUMNS = ["person", "title", "persona", "linkedin", "source", "company", "sponsor", "target_slug", "target_fit", "target_status"];
+
+export function peopleToCsv(targets: Target[]): string {
+  const rows: string[] = [PEOPLE_COLUMNS.join(",")];
+  const push = (cells: unknown[]) => rows.push(cells.map(csvCell).join(","));
+  for (const t of targets) {
+    if (t.kind === "contact" && t.contact_name) {
+      push([t.contact_name, t.contact_title, t.entry_persona, undefined, undefined, t.company, t.sponsor, t.slug, t.fit, t.status]);
+    }
+    for (const p of t.people ?? []) {
+      push([p.name, p.title, p.persona, p.linkedin, p.source, t.company, t.sponsor, t.slug, t.fit, t.status]);
+    }
+  }
+  return rows.join("\r\n") + "\r\n";
 }
 
 export function targetToMarkdown(t: Target): string {

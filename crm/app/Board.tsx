@@ -142,6 +142,7 @@ export function Board({ initial }: { initial: Target[] }) {
           </div>
           <div className="viewtoggle">
             <a href="/api/export?format=csv">export csv</a>
+            <a href="/api/export?format=people">people</a>
             <a href="/api/export?format=json">json</a>
           </div>
           <button className="add-btn ghost" onClick={() => setAddingContact(true)}>+ Contact</button>

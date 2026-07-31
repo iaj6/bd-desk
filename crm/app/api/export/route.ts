@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { listTargets, readOneBySlug } from "@/lib/store";
-import { targetsToCsv, targetToMarkdown } from "@/lib/export";
+import { targetsToCsv, peopleToCsv, targetToMarkdown } from "@/lib/export";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -8,7 +8,8 @@ export const dynamic = "force-dynamic";
 // Human-facing export, behind Basic Auth via the proxy (no bearer door on purpose —
 // agents read through MCP; this endpoint exists for the operator's own data).
 //   GET /api/export                → full pipeline, JSON (lossless)
-//   GET /api/export?format=csv     → full pipeline, flat CSV
+//   GET /api/export?format=csv     → full pipeline, flat CSV (one row per target)
+//   GET /api/export?format=people  → rolodex CSV (one row per person, with company context)
 //   GET /api/export?slug=x         → one target as a markdown brief
 //   GET /api/export?slug=x&format=json → one target, raw record
 
@@ -37,5 +38,7 @@ export async function GET(req: NextRequest) {
   const targets = await listTargets();
   if (format === "csv")
     return attachment(targetsToCsv(targets), `bd-desk-${date}.csv`, "text/csv; charset=utf-8");
+  if (format === "people")
+    return attachment(peopleToCsv(targets), `bd-desk-people-${date}.csv`, "text/csv; charset=utf-8");
   return attachment(JSON.stringify(targets, null, 2) + "\n", `bd-desk-${date}.json`, "application/json");
 }
