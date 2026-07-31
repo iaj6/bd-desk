@@ -108,7 +108,9 @@ Add the agent/environment ids from `.managed-agents.json` to the CRM's Vercel en
 - **CRM** — the kanban board at your Vercel URL. A Research button starts a graded
   dossier/sponsor session; the pipeline's nightly cron finalizes finished research,
   researches promising untouched targets (capped), drafts missing outreach, and
-  surfaces due follow-ups. The grader's verdict lands on each target.
+  surfaces due follow-ups. The grader's verdict lands on each target. Your data
+  stays yours: export the full pipeline as JSON or CSV, or any single target as
+  a markdown brief (`/api/export`, buttons in the UI).
 - **CLI** — `npm run dossier -- "Some Company"`, `npm run radar`, `npm run radar-fire`
   (fires the deployment now and tails it, grading verdicts included).
 - **MCP** — the CRM is an MCP server (`/api/mcp`, bearer `MCP_TOKEN`). Wire it into

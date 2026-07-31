@@ -140,6 +140,10 @@ export function Board({ initial }: { initial: Target[] }) {
             <button className={view === "list" ? "active" : ""} onClick={() => setView("list")}>list</button>
             <button className={view === "sponsor" ? "active" : ""} onClick={() => setView("sponsor")}>by sponsor</button>
           </div>
+          <div className="viewtoggle">
+            <a href="/api/export?format=csv">export csv</a>
+            <a href="/api/export?format=json">json</a>
+          </div>
           <button className="add-btn ghost" onClick={() => setAddingContact(true)}>+ Contact</button>
           <button className="add-btn" onClick={() => setAdding(true)}>+ Company</button>
         </div>
@@ -433,7 +437,11 @@ function Drawer({
         </div>
 
         <div className="drawer-foot">
-          <button className="del" onClick={onDelete}>Delete</button>
+          <div>
+            <button className="del" onClick={onDelete}>Delete</button>
+            <a className="foot-link" href={`/api/export?slug=${target.slug}`}>export .md</a>
+            <a className="foot-link" href={`/api/export?slug=${target.slug}&format=json`}>.json</a>
+          </div>
           <button onClick={onClose}>Close</button>
         </div>
       </aside>
