@@ -109,7 +109,8 @@ Add the agent/environment ids from `.managed-agents.json` to the CRM's Vercel en
   dossier/sponsor session; the pipeline's nightly cron finalizes finished research,
   researches promising untouched targets (capped), drafts missing outreach, and
   surfaces due follow-ups. The grader's verdict lands on each target. Your data
-  stays yours: export the full pipeline as JSON or CSV, the people across it as a
+  stays yours: export an Excel workbook (Targets + People sheets), the full
+  pipeline as JSON or CSV, the people across it as a
   rolodex CSV (one row per contact), or any single target as
   a markdown brief (`/api/export`, buttons in the UI).
 - **CLI** — `npm run dossier -- "Some Company"`, `npm run radar`, `npm run radar-fire`

@@ -1,4 +1,5 @@
 import type { Target } from "./store";
+import { workbook } from "./xlsx";
 
 // Export builders — pure functions over Target so they're testable without Blob.
 // Three shapes: JSON is the lossless full record (route serializes directly),
@@ -41,30 +42,41 @@ const CSV_COLUMNS: [string, (t: Target) => unknown][] = [
   ["updated_at", (t) => t.updated_at],
 ];
 
-export function targetsToCsv(targets: Target[]): string {
-  const header = CSV_COLUMNS.map(([name]) => name).join(",");
-  const rows = targets.map((t) => CSV_COLUMNS.map(([, get]) => csvCell(get(t))).join(","));
-  return [header, ...rows].join("\r\n") + "\r\n";
+function targetRows(targets: Target[]): unknown[][] {
+  return [CSV_COLUMNS.map(([name]) => name), ...targets.map((t) => CSV_COLUMNS.map(([, get]) => get(t)))];
 }
 
 // The rolodex view: one row per PERSON across the pipeline — contact-kind targets
 // contribute themselves, company targets contribute their research-extracted people.
-// This is the export for building an outreach list.
+// Denormalized on purpose: repeating the company fields per person row is what makes
+// it pivot-table-ready. `target_slug` joins back to the targets table.
 const PEOPLE_COLUMNS = ["person", "title", "persona", "linkedin", "source", "company", "sponsor", "target_slug", "target_fit", "target_status"];
 
-export function peopleToCsv(targets: Target[]): string {
-  const rows: string[] = [PEOPLE_COLUMNS.join(",")];
-  const push = (cells: unknown[]) => rows.push(cells.map(csvCell).join(","));
+function peopleRows(targets: Target[]): unknown[][] {
+  const rows: unknown[][] = [PEOPLE_COLUMNS];
   for (const t of targets) {
     if (t.kind === "contact" && t.contact_name) {
-      push([t.contact_name, t.contact_title, t.entry_persona, undefined, undefined, t.company, t.sponsor, t.slug, t.fit, t.status]);
+      rows.push([t.contact_name, t.contact_title, t.entry_persona, undefined, undefined, t.company, t.sponsor, t.slug, t.fit, t.status]);
     }
     for (const p of t.people ?? []) {
-      push([p.name, p.title, p.persona, p.linkedin, p.source, t.company, t.sponsor, t.slug, t.fit, t.status]);
+      rows.push([p.name, p.title, p.persona, p.linkedin, p.source, t.company, t.sponsor, t.slug, t.fit, t.status]);
     }
   }
-  return rows.join("\r\n") + "\r\n";
+  return rows;
 }
+
+const toCsv = (rows: unknown[][]) => rows.map((r) => r.map(csvCell).join(",")).join("\r\n") + "\r\n";
+
+export const targetsToCsv = (targets: Target[]) => toCsv(targetRows(targets));
+export const peopleToCsv = (targets: Target[]) => toCsv(peopleRows(targets));
+
+// One workbook, both tables: the 1-to-many that a single CSV can't hold. Cells go
+// in as inline strings (literal text — no formula surface), so no csv-style guard.
+export const pipelineWorkbook = (targets: Target[]) =>
+  workbook([
+    { name: "Targets", rows: targetRows(targets) },
+    { name: "People", rows: peopleRows(targets) },
+  ]);
 
 export function targetToMarkdown(t: Target): string {
   const title = t.kind === "contact" ? `${t.contact_name ?? t.company} — ${t.company}` : t.company;

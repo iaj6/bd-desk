@@ -141,7 +141,8 @@ export function Board({ initial }: { initial: Target[] }) {
             <button className={view === "sponsor" ? "active" : ""} onClick={() => setView("sponsor")}>by sponsor</button>
           </div>
           <div className="viewtoggle">
-            <a href="/api/export?format=csv">export csv</a>
+            <a href="/api/export?format=xlsx">export xlsx</a>
+            <a href="/api/export?format=csv">csv</a>
             <a href="/api/export?format=people">people</a>
             <a href="/api/export?format=json">json</a>
           </div>
