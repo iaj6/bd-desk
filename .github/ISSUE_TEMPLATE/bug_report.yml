@@ -1,0 +1,39 @@
+name: Bug report
+description: Something in the repo does not work as documented
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Managed Agents is a beta surface. If the platform behaviour has changed under
+        this repo, that is a valid bug — please say which API version you are on.
+  - type: dropdown
+    id: area
+    attributes:
+      label: Where
+      options:
+        - CRM (Next.js app, MCP server, nightly pipeline)
+        - Demo mode (npm run demo)
+        - Agents / provisioning (src/setup*, src/update)
+        - A run script (dossier, radar, digest, eval, dream)
+        - Skills or rubrics
+        - Docs / README
+    validations:
+      required: true
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+      description: What you ran, what you expected, and what you got. Paste the error.
+    validations:
+      required: true
+  - type: input
+    id: beta
+    attributes:
+      label: Managed Agents beta version
+      placeholder: managed-agents-2026-04-01
+  - type: input
+    id: env
+    attributes:
+      label: Node version and OS
+      placeholder: node 22.x, macOS 15

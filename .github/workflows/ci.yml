@@ -1,0 +1,81 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+# Cancel superseded runs on the same branch — nothing here needs to finish twice.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  repo:
+    name: Root (lint · typecheck · test)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: package-lock.json
+      - run: npm ci
+      # The root suite covers crm/lib too, so crm's deps have to be present.
+      - run: npm ci
+        working-directory: crm
+      - run: npm run lint
+      - run: npm run typecheck
+      - run: npm test
+
+  crm:
+    name: CRM (lint · typecheck · build)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: crm
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: crm/package-lock.json
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run typecheck
+      - run: npm run build
+
+  demo:
+    name: Demo mode boots with no credentials
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: crm
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: crm/package-lock.json
+      - run: npm ci
+      # The promise the README makes to a first-time visitor: clone, install, run —
+      # no API key, no Vercel account. Worth a job of its own, because it is the
+      # thing most likely to quietly break and the last thing anyone would notice.
+      - run: npm run seed:demo
+      - name: Boot and check the board renders
+        run: |
+          BD_DESK_DEMO=1 npx next dev --port 3010 > /tmp/demo.log 2>&1 &
+          for i in $(seq 1 60); do
+            if curl -sf -o /tmp/demo.html http://localhost:3010/; then break; fi
+            sleep 1
+          done
+          grep -q "Demo mode" /tmp/demo.html || { echo "::error::demo banner missing"; cat /tmp/demo.log; exit 1; }
+          grep -q "Cascade Provisions Co." /tmp/demo.html || { echo "::error::seeded targets missing"; cat /tmp/demo.log; exit 1; }
+          echo "demo mode booted and rendered the seeded board"
