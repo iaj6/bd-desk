@@ -3,8 +3,12 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "description": "An end-to-end BD pipeline on Claude Managed Agents — lead sourcing, research, drafting, and a lightweight CRM. Research-and-draft only; a human always sends.",
+  "description": "An end-to-end BD pipeline on Claude Managed Agents \u2014 lead sourcing, research, drafting, and a lightweight CRM. Research-and-draft only; a human always sends.",
   "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "check": "npm run lint && npm run typecheck && npm run test",
     "brand-pack": "tsx src/brand-pack.ts",
     "setup": "tsx src/setup.ts",
     "setup-sponsor": "tsx src/setup-sponsor.ts",
@@ -23,15 +27,32 @@
     "deploy-digest": "tsx src/deploy-digest.ts",
     "digest-fire": "tsx src/digest-fire.ts",
     "eval": "tsx src/eval.ts",
-    "dream": "tsx src/dream.ts"
+    "dream": "tsx src/dream.ts",
+    "lint": "eslint ."
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.112.3",
     "yaml": "^2.9.0"
   },
   "devDependencies": {
+    "@eslint/js": "^9.39.0",
     "@types/node": "^26.1.1",
+    "eslint": "^9.39.0",
     "tsx": "^4.19.0",
-    "typescript": "^5.6.0"
+    "typescript": "^5.6.0",
+    "typescript-eslint": "^8.68.0",
+    "vitest": "^4.1.11"
+  },
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/iaj6/bd-desk.git"
+  },
+  "bugs": {
+    "url": "https://github.com/iaj6/bd-desk/issues"
+  },
+  "homepage": "https://github.com/iaj6/bd-desk#readme",
+  "engines": {
+    "node": ">=22"
   }
 }

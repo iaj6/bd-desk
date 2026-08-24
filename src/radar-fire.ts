@@ -5,7 +5,7 @@
 //   npm run radar-fire
 
 import Anthropic from "@anthropic-ai/sdk";
-import { readFileSync, writeFileSync, existsSync, mkdirSync } from "node:fs";
+import { readFileSync, writeFileSync, mkdirSync } from "node:fs";
 
 const IDS = ".managed-agents.json";
 const ids = JSON.parse(readFileSync(IDS, "utf8"));
