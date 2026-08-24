@@ -10,6 +10,22 @@ Every automated path stops at a draft, and pipeline status is never machine-writ
 ![The BD Desk CRM — pipeline with fit scores, next steps, and human triage](docs/board.jpg)
 <sub>All companies shown are fictional demo data from the example brand pack.</sub>
 
+## Try it in 30 seconds
+
+No API key, no Vercel account, no cloud anything:
+
+```bash
+git clone https://github.com/iaj6/bd-desk && cd bd-desk/crm
+npm install && npm run demo          # http://localhost:3010
+```
+
+That seeds a fictional pipeline and boots the CRM. You can open a target, run
+"research", watch it attach a brief, draft outreach off the card, run a sponsor
+profile and watch its portfolio auto-add new targets to the board, and export the
+whole thing to Excel. The research and drafts are **canned** — no model is called and
+nothing leaves your machine — but every path around them is the real code. Wiring it
+to real agents is [Setup](#setup), below.
+
 Most Managed Agents examples demo one primitive at a time. This repo composes all of
 them into one working system:
 
@@ -61,6 +77,9 @@ nudges you weekly. Prompts stay short — identity + brand canon + pointers to
 **skills** (`skills/`) that carry the procedure.
 
 ## Setup
+
+This is the *real* setup — to just look around, use
+[the demo](#try-it-in-30-seconds) instead.
 
 You need: an Anthropic API key with Managed Agents access, a Vercel account (CRM
 hosting + Blob), and optionally a [Resend](https://resend.com) key for email.
@@ -178,14 +197,31 @@ skills/         on-demand procedure: formats, sweep protocol, machine-block
                 contracts + the validate_blocks.py the agents run on their drafts
 src/            provisioning + run scripts (setup*, deploy*, dossier, radar, eval, dream)
 evals/          tasks.json (fill with YOUR companies) + pinned baseline + runs
+tests/          one vitest suite over both projects — `npm test`
 crm/            Next.js CRM: kanban UI, REST API, MCP server, nightly pipeline,
-                Vercel Blob storage, morning-brief email
+                Vercel Blob storage, morning-brief email, demo mode
 ```
+
+The repo is two npm projects: the root (agents + scripts) and `crm/` (the app), each
+with its own lockfile. Tests for both live in `tests/` and run from the root.
+
+## Development
+
+```bash
+npm run check     # lint + typecheck + tests (root)
+npm test          # tests only — no network, no API key, ~0.4s
+cd crm && npm run lint && npm run typecheck && npm run build
+```
+
+CI runs all of the above on every push, plus a job that boots demo mode with no
+credentials — the promise the quickstart above makes is the one most likely to break
+silently. See [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## Status
 
 Managed Agents is a beta surface (`anthropic-beta: managed-agents-2026-04-01`); the
-SDK is pinned and this repo reflects the API as of July 2026. Built as a series of
+SDK is pinned and this repo reflects the API as of August 2026. Agents run on
+Claude Opus 5 (`claude-opus-5`). Built as a series of
 hands-on reps against the patterns in Anthropic's
 [cwc-workshops](https://github.com/anthropics/cwc-workshops); this project is not
 affiliated with Anthropic.
