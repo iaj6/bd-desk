@@ -4,3 +4,10 @@ node_modules/
 .env*
 !.env.example
 tsconfig.tsbuildinfo
+
+# local demo pipeline (npm run demo)
+.demo-data/
+
+# written by `next dev` on every run (Next.js agent instruction files)
+AGENTS.md
+CLAUDE.md
