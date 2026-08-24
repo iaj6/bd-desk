@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { STATUSES, type Status, type Target } from "@/lib/store";
+import { STATUSES, type Status, type Target } from "@/lib/types";
 
 const fitClass = (fit?: string) =>
   fit === "Strong" ? "Strong" : fit === "Skip" ? "Skip" : "look";
@@ -425,7 +425,7 @@ function Drawer({
               </span>
             </span>
             {dstatus === "running" && (
-              <div className="hint">Running the dossier agent — a few minutes. Safe to close; it'll attach when you reopen.</div>
+              <div className="hint">Running the dossier agent — a few minutes. Safe to close; it&apos;ll attach when you reopen.</div>
             )}
             {dstatus === "error" && <div className="hint err">Research errored — try again.</div>}
             <textarea
