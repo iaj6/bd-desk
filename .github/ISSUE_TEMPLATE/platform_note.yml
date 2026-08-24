@@ -1,0 +1,21 @@
+name: Platform note
+description: A Managed Agents behaviour worth writing down
+labels: [platform-note]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        The README's "Hard-won platform notes" section exists because this surface has
+        behaviour the docs do not state loudly. If you worked one out, it belongs here.
+  - type: textarea
+    id: behaviour
+    attributes:
+      label: The behaviour
+      description: What you expected, what actually happens, and how you confirmed it.
+    validations:
+      required: true
+  - type: textarea
+    id: workaround
+    attributes:
+      label: What to do about it
+      description: The pattern that works, ideally with the shape of the code.
