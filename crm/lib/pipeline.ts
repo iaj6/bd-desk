@@ -1,4 +1,4 @@
-import { listTargets, type Target } from "./store";
+import { listTargets } from "./store";
 import { startResearch, finalizeResearch } from "./research";
 import { draftOutreach } from "./outreach";
 

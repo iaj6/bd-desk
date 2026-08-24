@@ -1,6 +1,8 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { readOneBySlug, patchTarget, listTargets, type Target } from "./store";
 import { getBrandPack } from "./brand";
+import { isDemo } from "./storage";
+import { demoOutreach } from "./demo";
 
 export type Channel = "email" | "linkedin";
 
@@ -48,6 +50,13 @@ export async function draftOutreach(
   const t = await readOneBySlug(slug);
   if (!t) return null;
 
+  // Demo mode: canned draft, no model call. See lib/demo.ts.
+  if (isDemo()) {
+    const text = demoOutreach(t, channel);
+    await patchTarget(slug, channel === "linkedin" ? { linkedin_note: text } : { outreach: text });
+    return { channel, text };
+  }
+
   const isContact = t.kind === "contact";
 
   // If this contact's org has portcos in our CRM, treat it as a sponsor/operating-partner
@@ -93,7 +102,7 @@ export async function draftOutreach(
 
   const client = new Anthropic();
   const msg = await client.messages.create({
-    model: "claude-opus-4-8",
+    model: "claude-opus-5",
     max_tokens: 900,
     system: systemFor(channel, sponsorContact, canon, identity),
     messages: [{ role: "user", content: `${context}\n\nWrite the ${channel === "linkedin" ? "LinkedIn note" : "email"}.` }],

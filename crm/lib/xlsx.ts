@@ -73,6 +73,9 @@ function zip(files: { name: string; data: Buffer }[]): Buffer {
 
 const xml = (s: unknown) =>
   String(s ?? "")
+    // Stripping control characters is the point: XML 1.0 forbids them outright, and
+    // agent-sourced text carries strays that would make the sheet unparseable.
+    // eslint-disable-next-line no-control-regex
     .replace(/[\x00-\x08\x0b\x0c\x0e-\x1f]/g, "")
     .replace(/&/g, "&amp;")
     .replace(/</g, "&lt;")

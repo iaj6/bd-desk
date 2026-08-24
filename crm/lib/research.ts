@@ -1,6 +1,15 @@
 import Anthropic from "@anthropic-ai/sdk";
-import { readOneBySlug, patchTarget, upsertTarget, listTargets, slugify, type Target, type Person } from "./store";
+import { readOneBySlug, patchTarget, upsertTarget, listTargets, slugify, type Target } from "./store";
 import { defineOutcome, DELIVERABLE_FILENAME } from "./rubrics";
+import {
+  isSessionTerminal, lastVerdict, trimToDeliverable, extractBlock, parsePeople,
+  nameTokens, isNameVariant, portcoReceipt,
+} from "./deliverable";
+import { isDemo } from "./storage";
+import {
+  demoSessionId, demoSessionFinished, isDemoSession, demoDossier, demoSponsorProfile,
+  demoPeople, demoPortcos,
+} from "./demo";
 
 const FILES_BETAS = ["managed-agents-2026-04-01" as const];
 
@@ -30,6 +39,15 @@ export async function startResearch(
 ): Promise<{ status: "running"; session: string } | null> {
   const t = await readOneBySlug(slug);
   if (!t) return null;
+
+  // Demo mode fakes the session rather than the result: the record goes to
+  // "running" with a demo session id and the UI polls it exactly as it would a real
+  // multi-minute run. See lib/demo.ts.
+  if (isDemo()) {
+    const session = demoSessionId();
+    await patchTarget(slug, { dossier_status: "running", dossier_session: session });
+    return { status: "running", session };
+  }
 
   const isContact = t.kind === "contact";
   const agentId = isContact && SPONSOR_AGENT_ID ? SPONSOR_AGENT_ID : AGENT_ID;
@@ -64,18 +82,11 @@ export async function startResearch(
 export async function finalizeResearch(target: Target): Promise<Target | null> {
   if (target.dossier_status !== "running" || !target.dossier_session) return null;
 
+  if (isDemoSession(target.dossier_session)) return finalizeDemoResearch(target);
+
   const client = new Anthropic();
   const session = await client.beta.sessions.retrieve(target.dossier_session);
-  // A graded session idles TRANSIENTLY around evaluation cycles (the grader can
-  // still send it back to revise) — only finalize once every outcome evaluation
-  // is in a terminal state, or the deliverable may be a half-done draft.
-  const TERMINAL_OUTCOME = new Set(["satisfied", "max_iterations_reached", "failed", "interrupted"]);
-  const terminal =
-    session.status === "terminated" ||
-    (session.status === "idle" &&
-      (session as any).stop_reason?.type !== "requires_action" &&
-      (session.outcome_evaluations ?? []).every((o) => TERMINAL_OUTCOME.has(o.result)));
-  if (!terminal) return null;
+  if (!isSessionTerminal(session)) return null;
 
   let brief = ((await fetchDeliverable(client, target.dossier_session)) ?? "").trim();
   if (!brief) {
@@ -86,78 +97,58 @@ export async function finalizeResearch(target: Target): Promise<Target | null> {
       .join("\n\n") // separate messages so the final H1 lands at a line start (not glued onto narration)
       .trim();
   }
-  // Drop the agent's mid-research narration by keeping from the first H1 heading onward
-  // (works for both "# Pre-Engagement Dossier" and "# Sponsor Profile").
-  const h1 = brief.match(/^#\s+.+/m);
-  if (h1?.index && h1.index > 0) brief = brief.slice(h1.index).trim();
+  brief = trimToDeliverable(brief);
 
-  let people: Person[] | undefined;
-  const pm = brief.match(/<people>([\s\S]*?)<\/people>/i);
-  if (pm) {
-    try {
-      const arr = JSON.parse(pm[1].replace(/```json|```/g, "").trim());
-      if (Array.isArray(arr)) people = arr.filter((p) => p && typeof p.name === "string") as Person[];
-    } catch {
-      /* leave people undefined */
-    }
-    brief = brief.replace(pm[0], "").trim();
-  }
+  const peopleBlock = extractBlock(brief, "people");
+  const people = parsePeople(peopleBlock.items);
+  brief = peopleBlock.rest;
 
   // Auto-add ADD-flagged portcos from sponsor profiles (the self-feeding loop: one
   // sponsor profile → new targets the nightly pipeline researches on its own). New
   // slugs only — a portco mention is weaker signal than an existing record, so it
   // never overwrites anything already in the CRM.
-  let portcoReceipt = "";
-  const pcm = brief.match(/<portcos>([\s\S]*?)<\/portcos>/i);
-  if (pcm) {
-    try {
-      const arr = JSON.parse(pcm[1].replace(/```json|```/g, "").trim());
-      if (Array.isArray(arr)) {
-        const { added, capped } = await addPortcos(arr);
-        // No silent caps: the profile itself records what the auto-add did, so a
-        // fund with 12 qualifying portcos never reads identically to one with 8.
-        portcoReceipt =
-          `\n\n---\n*Auto-add receipt: ${added} portco${added === 1 ? "" : "s"} added to the pipeline` +
-          (capped > 0
-            ? `; ${capped} more qualified but hit the per-profile cap (${PORTCO_CAP}) — add them manually from the Portfolio section if wanted.*`
-            : `.*`);
-      }
-    } catch {
-      /* malformed block → skip auto-add, keep the brief */
-    }
-    brief = brief.replace(pcm[0], "").trim() + portcoReceipt;
+  const portcoBlock = extractBlock(brief, "portcos");
+  brief = portcoBlock.rest;
+  if (portcoBlock.items) {
+    const { added, capped } = await addPortcos(portcoBlock.items);
+    brief += portcoReceipt(added, capped, PORTCO_CAP);
   }
 
-  // Copy the platform grader's verdict onto the target (last completed evaluation).
-  const graded = (session.outcome_evaluations ?? []).filter((o) => o.completed_at).pop();
+  const graded = lastVerdict(session);
 
   return patchTarget(target.slug, {
     dossier: brief,
     dossier_status: "done",
     ...(people ? { people } : {}),
-    ...(graded ? { grade: graded.result, grade_notes: graded.explanation ?? undefined } : {}),
+    ...(graded ? { grade: graded.result, grade_notes: graded.explanation } : {}),
+  });
+}
+
+// Demo counterpart to finalizeResearch: same shape, same downstream effects (people
+// attached, portcos auto-added, a receipt appended) — just canned text instead of a
+// graded agent run.
+async function finalizeDemoResearch(target: Target): Promise<Target | null> {
+  if (!demoSessionFinished(target.dossier_session!)) return null;
+
+  const isContact = target.kind === "contact";
+  let brief = isContact ? demoSponsorProfile(target) : demoDossier(target);
+
+  if (isContact) {
+    const { added, capped } = await addPortcos(demoPortcos(target.sponsor ?? target.company));
+    brief += portcoReceipt(added, capped, PORTCO_CAP);
+  }
+
+  return patchTarget(target.slug, {
+    dossier: brief,
+    dossier_status: "done",
+    people: demoPeople(),
+    grade: "satisfied",
+    grade_notes: "Demo mode — no grader ran. The real pipeline scores this against agents/rubrics/.",
   });
 }
 
 const PORTCO_CAP = 8; // per sponsor profile — quality over count
 const PORTCO_FITS = new Set(["Strong", "Worth a look"]);
-
-// Duplicate detection has to survive name variants — an acronym form and the
-// spelled-out company name slugify differently (observed in prod). Compare
-// distinctive-token SETS: strip generic corporate words, then treat subset/equality as a
-// match. Biased toward skipping — a false skip costs a mention, a false add costs
-// research sessions and duplicate outreach. Extend this set with the filler words
-// common in YOUR vertical's company names (e.g. "logistics freight" for supply chain).
-const GENERIC = new Set(
-  ("systems services service solutions industries international national global partners " +
-    "distribution group holdings holding company co inc llc lp corp corporation the and of").split(" "),
-);
-function nameTokens(company: string): Set<string> {
-  const all = (company.toLowerCase().match(/[a-z0-9]+/g) ?? []).filter((w) => w.length >= 2);
-  const distinctive = all.filter((w) => !GENERIC.has(w));
-  return new Set(distinctive.length ? distinctive : all);
-}
-const isSubset = (a: Set<string>, b: Set<string>) => [...a].every((x) => b.has(x));
 
 // Returns the add/drop tally so the caller can receipt it — qualified portcos past
 // the cap are counted, never silently discarded.
@@ -173,7 +164,7 @@ async function addPortcos(arr: unknown[]): Promise<{ added: number; capped: numb
     const slug = slugify(p.company);
     if (await readOneBySlug(slug)) continue; // exact match → leave the curated record alone
     const tokens = nameTokens(p.company);
-    if (existing.some((e) => isSubset(tokens, e) || isSubset(e, tokens))) continue; // name variant of an existing target
+    if (existing.some((e) => isNameVariant(tokens, e))) continue; // name variant of an existing target
     if (budget <= 0) {
       capped++; // would have been added — count it so the receipt can say so
       continue;

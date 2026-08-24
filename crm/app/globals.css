@@ -143,3 +143,24 @@ table.people { width: 100%; border-collapse: collapse; }
 table.people td { padding: 5px 8px 5px 0; border-bottom: 1px solid var(--line); vertical-align: top; }
 table.people .pname { font-weight: 600; white-space: nowrap; }
 table.people a { color: var(--accent); text-decoration: none; font-size: 12px; }
+
+/* Demo mode notice — deliberately loud. A demo board must never be mistaken for a
+   real pipeline, in a screenshot or on a projector. */
+.demo-banner {
+  background: color-mix(in srgb, var(--look) 14%, transparent);
+  border: 1px solid color-mix(in srgb, var(--look) 40%, transparent);
+  color: var(--text);
+  border-radius: 9px;
+  padding: 10px 14px;
+  margin-bottom: 18px;
+  font-size: 13px;
+  line-height: 1.55;
+}
+.demo-banner b { color: var(--look); }
+.demo-banner code {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  padding: 1px 5px;
+  font-size: 12px;
+}
