@@ -35,7 +35,7 @@ console.log(`environment → ${env.id}`);
 // read, write, bash, glob, grep.
 const agent = await client.beta.agents.create({
   name: "BD Desk Dossier",
-  model: "claude-opus-4-8",
+  model: "claude-opus-5",
   system,
   tools: [{ type: "agent_toolset_20260401" }],
 });

@@ -63,7 +63,7 @@ Consolidation rules:
 `.trim();
 
 const dream = await client.beta.dreams.create({
-  model: "claude-opus-4-8",
+  model: "claude-opus-5",
   inputs: [
     { type: "memory_store", memory_store_id: ids.memoryStoreId },
     ...(sessionIds.length ? [{ type: "sessions" as const, session_ids: sessionIds }] : []),
