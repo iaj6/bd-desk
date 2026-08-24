@@ -24,7 +24,7 @@ const system = renderVars(readFileSync("agents/weekly-digest.system.md", "utf8")
 
 const agent = await client.beta.agents.create({
   name: "BD Desk Weekly Digest",
-  model: "claude-opus-4-8",
+  model: "claude-opus-5",
   system,
   tools: [{ type: "agent_toolset_20260401" }],
 });

@@ -34,7 +34,7 @@ const client = new Anthropic();
 if (!ids.mapperAgentId) {
   const mapper = await client.beta.agents.create({
     name: "BD Desk Sponsor Mapper",
-    model: "claude-opus-4-8",
+    model: "claude-opus-5",
     system: withCanon("radar", readFileSync("agents/sponsor-mapper.system.md", "utf8")),
     tools: [{ type: "agent_toolset_20260401" }],
   });
