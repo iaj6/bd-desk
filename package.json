@@ -35,9 +35,9 @@
     "yaml": "^2.9.0"
   },
   "devDependencies": {
-    "@eslint/js": "^9.39.0",
+    "@eslint/js": "^10.0.1",
     "@types/node": "^26.1.1",
-    "eslint": "^9.39.0",
+    "eslint": "^10.9.0",
     "tsx": "^4.19.0",
     "typescript": "^5.6.0",
     "typescript-eslint": "^8.68.0",
