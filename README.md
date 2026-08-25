@@ -1,5 +1,10 @@
 # BD Desk
 
+[![CI](https://github.com/iaj6/bd-desk/actions/workflows/ci.yml/badge.svg)](https://github.com/iaj6/bd-desk/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
+[![Node](https://img.shields.io/badge/node-%E2%89%A522-brightgreen)](package.json)
+[![Managed Agents](https://img.shields.io/badge/Claude-Managed%20Agents%20%28beta%29-8A4FFF)](https://platform.claude.com/docs/en/managed-agents/overview)
+
 An end-to-end business-development pipeline built on **[Claude Managed Agents](https://platform.claude.com/docs/en/managed-agents/overview)** —
 lead sourcing, company research, outreach drafting, a weekly nudge, and a lightweight
 deployable CRM to run it from.
