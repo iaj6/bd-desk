@@ -2,21 +2,27 @@ name: CI
 
 on:
   push:
-    branches: [main]
   pull_request:
   workflow_dispatch:
 
-# Cancel superseded runs on the same branch — nothing here needs to finish twice.
+# Cancel superseded runs on the same ref — nothing here needs to finish twice.
 concurrency:
-  group: ci-${{ github.ref }}
+  group: ci-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
 permissions:
   contents: read
 
+# Every push gets checked, including branches, so you get a green tick before
+# opening anything. Each job's `if` stops a same-repo pull request running a
+# second, identical time — the push event already covered that commit. Pull
+# requests from forks still run, because a fork's pushes never trigger workflows
+# here, and a fork PR is exactly the case where you want the checks.
+
 jobs:
   repo:
     name: Root (lint · typecheck · test)
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name != github.repository
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
@@ -35,6 +41,7 @@ jobs:
 
   crm:
     name: CRM (lint · typecheck · build)
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name != github.repository
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -53,6 +60,7 @@ jobs:
 
   demo:
     name: Demo mode boots with no credentials
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name != github.repository
     runs-on: ubuntu-latest
     defaults:
       run:
