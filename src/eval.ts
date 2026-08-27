@@ -139,9 +139,15 @@ async function runTask(task: Task): Promise<TaskResult> {
   console.log(`  ${task.id} → ${session.id}`);
 
   const stream = await client.beta.sessions.events.stream(session.id);
+
+  // Sending the kickoff blocks ~100s while the sandbox provisions (see dossier.ts).
+  // Tasks run concurrently here, so log whole lines tagged with the task id rather
+  // than writing a partial line to a stdout two tasks share.
+  const kickoffAt = Date.now();
   await client.beta.sessions.events.send(session.id, {
     events: [defineOutcome(task.agent, task.prompt)],
   });
+  console.log(`  ${task.id} running after ${Math.round((Date.now() - kickoffAt) / 1000)}s`);
 
   // A graded session idles TRANSIENTLY around evaluation cycles — "done" is
   // terminated, or idle with every outcome evaluation in a terminal state.

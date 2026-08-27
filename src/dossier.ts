@@ -40,9 +40,18 @@ console.log(`watch    → https://platform.claude.com/workspaces/default/session
 // the dossier against agents/rubrics/bd-dossier.rubric.md and sends the agent back
 // to revise if it falls short.
 const stream = await client.beta.sessions.events.stream(session.id);
+
+// Sending the kickoff BLOCKS while the session provisions its sandbox — about
+// 100s on a cold environment, measured. Announce the wait: without a line here the
+// runner prints a session URL and then goes silent long enough to look hung, and
+// the reflex is to kill it (which orphans an empty session, since the task never
+// registered).
+process.stdout.write("starting → provisioning the session sandbox (~1-2 min)…");
+const kickoffAt = Date.now();
 await client.beta.sessions.events.send(session.id, {
   events: [defineOutcome("dossier", `Build a BD dossier on: ${target}`)],
 });
+process.stdout.write(` running after ${Math.round((Date.now() - kickoffAt) / 1000)}s\n\n`);
 
 // Terminal grader verdicts — a graded session idles TRANSIENTLY around
 // evaluation cycles, so idle only means "done" once one of these has landed.
