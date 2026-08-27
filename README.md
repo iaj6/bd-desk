@@ -192,6 +192,13 @@ Things we hit building this that the docs won't tell you loudly enough:
    environments reach MCP servers with no environment change.
 8. **Dreaming is a gated research preview** — `/v1/dreams` 404s until your org is
    opted in. `npm run dream` is ready for when it is.
+9. **The first `events.send` blocks while the sandbox provisions** — about 100s on
+   a cold environment, measured, before the call returns and the session starts
+   running. Print something before you await it. A runner that prints a session URL
+   and then sits silent for a minute and a half looks hung, and the reflex is to
+   kill it — which leaves an orphaned session that never registered its task
+   (`events.list` returns 0) and never runs. Budget it into wall-clock too: a
+   graded dossier took 27-34 minutes end to end, provisioning included.
 
 ## Repo layout
 
