@@ -241,6 +241,7 @@ function Drawer({
   const [linkedinNote, setLinkedinNote] = useState(target.linkedin_note ?? "");
   const [dossier, setDossier] = useState(target.dossier ?? "");
   const [dstatus, setDstatus] = useState<string>(target.dossier_status ?? "none");
+  const [sessionId, setSessionId] = useState<string | undefined>(target.dossier_session);
   const [drafting, setDrafting] = useState(false);
   const [draftingLi, setDraftingLi] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -263,8 +264,13 @@ function Drawer({
   // Poll while a dossier run is in flight. Resumes if reopened after navigating away.
   useEffect(() => {
     if (dstatus !== "running") return;
+    // Poll the session we're actually waiting on, so a re-research never reports the
+    // previous run's dossier as done (see the research route).
+    const url = sessionId
+      ? `/api/targets/${target.slug}/research?session=${encodeURIComponent(sessionId)}`
+      : `/api/targets/${target.slug}/research`;
     const id = setInterval(async () => {
-      const res = await fetch(`/api/targets/${target.slug}/research`);
+      const res = await fetch(url);
       if (!res.ok) return;
       const d = await res.json();
       if (d.status === "done") {
@@ -278,13 +284,16 @@ function Drawer({
       }
     }, 5000);
     return () => clearInterval(id);
-  }, [dstatus, target, onSaved, onReload]);
+  }, [dstatus, sessionId, target, onSaved, onReload]);
 
   async function research() {
     setDstatus("running");
-    onSaved({ ...target, dossier_status: "running" }); // persist to the list immediately
     const res = await fetch(`/api/targets/${target.slug}/research`, { method: "POST" });
-    if (!res.ok) {
+    if (res.ok) {
+      const d = await res.json().catch(() => ({}));
+      if (d.session) setSessionId(d.session); // poll this run, not the previous one
+      onSaved({ ...target, dossier_status: "running" }); // persist to the list
+    } else {
       setDstatus("error");
       alert("Research failed: " + ((await res.json().catch(() => ({}))).error ?? res.status));
     }

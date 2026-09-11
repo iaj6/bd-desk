@@ -12,6 +12,8 @@ export default defineConfig({
   resolve: {
     alias: {
       "next/server": resolve(import.meta.dirname, "crm/node_modules/next/server.js"),
+      // So a root test can vi.mock the same @vercel/blob module the CRM resolves.
+      "@vercel/blob": resolve(import.meta.dirname, "crm/node_modules/@vercel/blob"),
     },
   },
   test: {

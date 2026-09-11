@@ -1,4 +1,5 @@
 import Anthropic from "@anthropic-ai/sdk";
+import { after } from "next/server";
 import { readOneBySlug, patchTarget, upsertTarget, listTargets, slugify, type Target } from "./store";
 import { defineOutcome, DELIVERABLE_FILENAME } from "./rubrics";
 import {
@@ -16,9 +17,15 @@ const FILES_BETAS = ["managed-agents-2026-04-01" as const];
 // The deliverable lives in the session's output file (Files API, indexed under the
 // session's scope with a short lag after idle). Null → caller falls back to
 // rebuilding from the message log (sessions that predate the file contract).
+// The Files API indexes the deliverable under the session's scope with a 1–3s lag
+// after the session idles (measured; see src/outputs.ts, which uses the same budget).
+// Poll a window comfortably past that worst case before falling back to the message log.
+const DELIVERABLE_ATTEMPTS = 4;
+const DELIVERABLE_RETRY_MS = 2000;
+
 async function fetchDeliverable(client: Anthropic, sessionId: string): Promise<string | null> {
-  for (let attempt = 0; attempt < 2; attempt++) {
-    if (attempt > 0) await new Promise((r) => setTimeout(r, 1500));
+  for (let attempt = 0; attempt < DELIVERABLE_ATTEMPTS; attempt++) {
+    if (attempt > 0) await new Promise((r) => setTimeout(r, DELIVERABLE_RETRY_MS));
     const files = await client.beta.files.list({ scope_id: sessionId, betas: FILES_BETAS });
     const f = files.data.find((x) => x.filename.endsWith(DELIVERABLE_FILENAME) && x.downloadable);
     if (f) return await (await client.beta.files.download(f.id, { betas: FILES_BETAS })).text();
@@ -40,6 +47,12 @@ export async function startResearch(
   const t = await readOneBySlug(slug);
   if (!t) return null;
 
+  // Already running — hand back the in-flight session rather than starting (and paying
+  // for) a second cloud agent on the same target.
+  if (t.dossier_status === "running" && t.dossier_session) {
+    return { status: "running", session: t.dossier_session };
+  }
+
   // Demo mode fakes the session rather than the result: the record goes to
   // "running" with a demo session id and the UI polls it exactly as it would a real
   // multi-minute run. See lib/demo.ts.
@@ -50,7 +63,15 @@ export async function startResearch(
   }
 
   const isContact = t.kind === "contact";
-  const agentId = isContact && SPONSOR_AGENT_ID ? SPONSOR_AGENT_ID : AGENT_ID;
+  // A contact runs the sponsor-profile agent. Without SPONSOR_AGENT_ID, the sponsor
+  // prompt would go to the dossier agent under the dossier rubric — a guaranteed
+  // max_iterations_reached that burns three Opus passes and produces no portcos. Refuse
+  // with a clear message instead.
+  if (isContact && !SPONSOR_AGENT_ID) {
+    await patchTarget(slug, { dossier_status: "error" });
+    throw new Error("Contact research needs SPONSOR_AGENT_ID — run `npm run setup-sponsor` and add it to the CRM env.");
+  }
+  const agentId = isContact ? SPONSOR_AGENT_ID! : AGENT_ID;
   const prompt = isContact
     ? `Profile the PE sponsor "${t.company}" for the operating-partner outreach play. We want to reach ${t.contact_name}${t.contact_title ? `, ${t.contact_title}` : ""}. Map their full portfolio in our ICP's space (flag portcos worth adding as pipeline targets), recent deals, co-investors, and the key partners.`
     : `Build a BD dossier on: ${t.company}${t.sponsor ? ` (PE sponsor: ${t.sponsor})` : ""}${t.hq ? `, HQ ${t.hq}` : ""}.`;
@@ -62,12 +83,26 @@ export async function startResearch(
       environment_id: ENV_ID,
       title: `${isContact ? "Sponsor profile" : "Dossier"}: ${t.company}`,
     });
-    // Graded kickoff: the platform grader scores the deliverable against the
-    // rubric and sends the agent back to revise if it falls short (see rubrics.ts).
-    await client.beta.sessions.events.send(session.id, {
-      events: [defineOutcome(isContact && SPONSOR_AGENT_ID ? "sponsor" : "dossier", prompt)],
-    });
+    // Mark running with the NEW session id BEFORE the graded kickoff. Creating the
+    // session is fast, but the first `events.send` BLOCKS ~100s while the sandbox
+    // provisions (README platform note 9). Doing the send inline would exceed the
+    // route's function budget and orphan the session; instead we return now and run the
+    // kickoff after the response (`after`). Writing "running" first also means a
+    // re-research can never be reported "done" off the previous run's dossier.
     await patchTarget(slug, { dossier_status: "running", dossier_session: session.id });
+    after(async () => {
+      try {
+        // Graded kickoff: the platform grader scores the deliverable against the
+        // rubric and sends the agent back to revise if it falls short (see rubrics.ts).
+        await client.beta.sessions.events.send(session.id, {
+          events: [defineOutcome(isContact ? "sponsor" : "dossier", prompt)],
+        });
+      } catch {
+        // The kickoff never landed — the session is orphaned. Surface it so the drawer
+        // shows an error and the pipeline can retry, instead of polling a dead session.
+        await patchTarget(slug, { dossier_status: "error" });
+      }
+    });
     return { status: "running", session: session.id };
   } catch (e) {
     await patchTarget(slug, { dossier_status: "error" });
@@ -90,7 +125,9 @@ export async function finalizeResearch(target: Target): Promise<Target | null> {
 
   const client = new Anthropic();
   const session = await client.beta.sessions.retrieve(target.dossier_session);
-  if (!isSessionTerminal(session)) return null;
+  // requireEvaluation: research is always a graded run, so an idle session with no
+  // grader verdict yet is not done (see deliverable.ts).
+  if (!isSessionTerminal(session, { requireEvaluation: true })) return null;
 
   let brief = ((await fetchDeliverable(client, target.dossier_session)) ?? "").trim();
   if (!brief) {
@@ -101,7 +138,15 @@ export async function finalizeResearch(target: Target): Promise<Target | null> {
       .join("\n\n") // separate messages so the final H1 lands at a line start (not glued onto narration)
       .trim();
   }
-  brief = trimToDeliverable(brief);
+  brief = trimToDeliverable(brief).trim();
+
+  // Terminal session but no deliverable (grader failed, or the file never landed and
+  // there were no messages). Mark it errored so the drawer offers a retry and the
+  // nightly pipeline can re-research it — never freeze an empty brief in as "done",
+  // which would draft outreach off nothing and never re-run.
+  if (!brief) {
+    return patchTarget(target.slug, { dossier_status: "error" });
+  }
 
   const peopleBlock = extractBlock(brief, "people");
   const people = parsePeople(peopleBlock.items);

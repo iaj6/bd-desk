@@ -72,7 +72,7 @@ describe("runPipeline — ordering", () => {
   it("drafts before finalizing, so an eventually-consistent read cannot clobber a fresh dossier", async () => {
     // Documented prod failure: a draft's read-modify-write seconds after a finalize
     // reads the pre-finalize record and wipes the just-attached dossier.
-    await seed("Ready To Draft", {}, { dossier_status: "done", dossier: "old brief" });
+    await seed("Ready To Draft", { fit: "Strong" }, { dossier_status: "done", dossier: "old brief" });
     await seed("Still Running", {}, { dossier_status: "running", dossier_session: "s1" });
 
     await runPipeline();
@@ -93,14 +93,22 @@ describe("runPipeline — ordering", () => {
 
 describe("runPipeline — drafting", () => {
   it("drafts email for a researched company that has none", async () => {
-    await seed("Acme", {}, { dossier_status: "done" });
+    await seed("Acme", { fit: "Strong" }, { dossier_status: "done" });
     const report = await runPipeline();
     expect(report.drafted).toEqual([{ slug: "acme", channels: ["email"] }]);
   });
 
+  it("does not draft a target the grader rated Skip", async () => {
+    await seed("Skip Co", { fit: "Skip" }, { dossier_status: "done" });
+    await seed("Unrated Co", {}, { dossier_status: "done" });
+    const report = await runPipeline();
+    expect(report.drafted).toEqual([]);
+    expect(calls.filter((c) => c.startsWith("draft:"))).toEqual([]);
+  });
+
   it("adds a LinkedIn note only for contact-kind targets", async () => {
-    await seed("Pat Lee Fund", { kind: "contact", contact_name: "Pat Lee" }, { dossier_status: "done" });
-    await seed("Acme Co", {}, { dossier_status: "done" });
+    await seed("Pat Lee Fund", { kind: "contact", contact_name: "Pat Lee", fit: "Strong" }, { dossier_status: "done" });
+    await seed("Acme Co", { fit: "Strong" }, { dossier_status: "done" });
     const report = await runPipeline();
     const byslug = Object.fromEntries(report.drafted.map((d) => [d.slug, d.channels]));
     expect(byslug["pat-lee-fund"]).toEqual(["email", "linkedin"]);
@@ -129,15 +137,15 @@ describe("runPipeline — drafting", () => {
   });
 
   it("caps drafting at four targets per run", async () => {
-    for (let i = 0; i < 7; i++) await seed(`Company ${i}`, {}, { dossier_status: "done" });
+    for (let i = 0; i < 7; i++) await seed(`Company ${i}`, { fit: "Strong" }, { dossier_status: "done" });
     const report = await runPipeline();
     expect(report.drafted).toHaveLength(4);
   });
 
   it("records a failed channel as an error and keeps going", async () => {
     failDraft.add("breaks");
-    await seed("Breaks", {}, { dossier_status: "done" });
-    await seed("Works", {}, { dossier_status: "done" });
+    await seed("Breaks", { fit: "Strong" }, { dossier_status: "done" });
+    await seed("Works", { fit: "Strong" }, { dossier_status: "done" });
     const report = await runPipeline();
     expect(report.errors).toEqual([{ slug: "breaks", step: "draft:email", message: "model overloaded" }]);
     expect(report.drafted).toEqual([{ slug: "works", channels: ["email"] }]);
@@ -181,6 +189,13 @@ describe("runPipeline — research", () => {
     const report = await runPipeline();
     expect(report.errors[0]).toMatchObject({ slug: "breaks", step: "research" });
     expect(report.started).toHaveLength(3); // the failure did not eat a slot
+  });
+
+  it("does not start new research on the morning brief run (startNewResearch off)", async () => {
+    await seed("Strong One", { fit: "Strong" });
+    const report = await runPipeline({ startNewResearch: false });
+    expect(report.started).toEqual([]);
+    expect(calls.filter((c) => c.startsWith("start:"))).toEqual([]);
   });
 });
 

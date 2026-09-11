@@ -36,6 +36,18 @@ describe("isSessionTerminal", () => {
     expect(isSessionTerminal({ status: "idle", outcome_evaluations: null })).toBe(true);
   });
 
+  it("with requireEvaluation, an idle session with no verdict yet is NOT done (graded run)", () => {
+    // A graded kickoff always produces an evaluation; none means the kickoff hasn't
+    // landed (the session was just created). Finalizing here freezes an empty deliverable.
+    expect(isSessionTerminal({ status: "idle" }, { requireEvaluation: true })).toBe(false);
+    expect(isSessionTerminal({ status: "idle", outcome_evaluations: [] }, { requireEvaluation: true })).toBe(false);
+    // A terminated session is done even with no evaluation; a landed verdict satisfies it.
+    expect(isSessionTerminal({ status: "terminated" }, { requireEvaluation: true })).toBe(true);
+    expect(
+      isSessionTerminal({ status: "idle", outcome_evaluations: [{ result: "satisfied" }] }, { requireEvaluation: true }),
+    ).toBe(true);
+  });
+
   it("is false for any still-working status", () => {
     for (const status of ["running", "queued", "provisioning", undefined]) {
       expect(isSessionTerminal({ status })).toBe(false);

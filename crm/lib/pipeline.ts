@@ -31,7 +31,11 @@ export interface PipelineReport {
   errors: { slug: string; step: string; message: string }[];
 }
 
-export async function runPipeline(): Promise<PipelineReport> {
+// `startNewResearch` gates step 3 (starting new cloud sessions). The overnight run
+// (/api/cron/pipeline) starts research; the morning run (/api/cron/brief) leaves it
+// off, so the two crons together honor RESEARCH_CAP once per day, not twice.
+export async function runPipeline(opts?: { startNewResearch?: boolean }): Promise<PipelineReport> {
+  const startNewResearch = opts?.startNewResearch ?? true;
   const report: PipelineReport = {
     finalized: [], started: [], drafted: [], followupsDue: [],
     newTargets: [], running: [], readyForReview: [], errors: [],
@@ -51,6 +55,10 @@ export async function runPipeline(): Promise<PipelineReport> {
   for (const t of targets) {
     if (draftBudget <= 0) break;
     if (t.dossier_status !== "done" || SKIP_STATUSES.has(t.status)) continue;
+    // Only draft what the grader judged worth pursuing. Without this a "Skip" dossier
+    // still gets a full cold-email draft written overnight and surfaced in the brief —
+    // paid work on a company the system itself said not to chase.
+    if (!t.fit || !AUTO_FITS.has(t.fit)) continue;
     const channels: string[] = [];
     if (!t.outreach) channels.push("email");
     if (!t.linkedin_note && t.kind === "contact") channels.push("linkedin");
@@ -87,21 +95,24 @@ export async function runPipeline(): Promise<PipelineReport> {
   }
 
   // 3. RESEARCH promising targets that have none (skip anything the human killed/won).
-  let startBudget = RESEARCH_CAP;
-  for (const t of targets) {
-    if (startBudget <= 0) break;
-    if (t.dossier || t.dossier_status) continue;
-    if (SKIP_STATUSES.has(t.status)) continue;
-    if (!t.fit || !AUTO_FITS.has(t.fit)) continue;
-    try {
-      const started = await startResearch(t.slug);
-      if (started) {
-        report.started.push(t.slug);
-        report.running.push(t.slug);
-        startBudget--;
+  //    Only the overnight run does this, so the daily research cap isn't spent twice.
+  if (startNewResearch) {
+    let startBudget = RESEARCH_CAP;
+    for (const t of targets) {
+      if (startBudget <= 0) break;
+      if (t.dossier || t.dossier_status) continue;
+      if (SKIP_STATUSES.has(t.status)) continue;
+      if (!t.fit || !AUTO_FITS.has(t.fit)) continue;
+      try {
+        const started = await startResearch(t.slug);
+        if (started) {
+          report.started.push(t.slug);
+          report.running.push(t.slug);
+          startBudget--;
+        }
+      } catch (e) {
+        report.errors.push({ slug: t.slug, step: "research", message: (e as Error).message });
       }
-    } catch (e) {
-      report.errors.push({ slug: t.slug, step: "research", message: (e as Error).message });
     }
   }
 
