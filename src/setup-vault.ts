@@ -9,13 +9,11 @@
 // Also records the CRM url in .managed-agents.json — brand-pack and setup-mcp
 // read it from there so it's typed once.
 
-import Anthropic from "@anthropic-ai/sdk";
-import { readFileSync, writeFileSync, existsSync } from "node:fs";
+import "./env.ts";
+import { anthropic } from "./constants.ts";
+import { readIds, writeIds, IDS_FILE } from "./ids.ts";
 
-if (existsSync(".env")) process.loadEnvFile(".env");
-
-const IDS = ".managed-agents.json";
-const ids = JSON.parse(readFileSync(IDS, "utf8"));
+const ids = readIds();
 
 const crmUrl = process.env.CRM_URL;
 if (!crmUrl) {
@@ -23,7 +21,7 @@ if (!crmUrl) {
   process.exit(1);
 }
 
-const client = new Anthropic();
+const client = anthropic();
 
 if (ids.vaultId) {
   console.log(`Vault already exists: ${ids.vaultId}. Delete the key to re-create.`);
@@ -35,5 +33,5 @@ console.log(`vault → ${vault.id}`);
 
 ids.vaultId = vault.id;
 ids.crmUrl = crmUrl;
-writeFileSync(IDS, JSON.stringify(ids, null, 2));
-console.log(`Saved vaultId + crmUrl to ${IDS}.`);
+writeIds(ids);
+console.log(`Saved vaultId + crmUrl to ${IDS_FILE}.`);

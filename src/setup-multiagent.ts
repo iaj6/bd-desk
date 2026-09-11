@@ -15,32 +15,27 @@
 // The mapper deliberately gets NO memory store, NO MCP, and NO skills — research
 // tools only. The coordinator owns memory, CRM pushes, and the report.
 
-import Anthropic from "@anthropic-ai/sdk";
-import { readFileSync, writeFileSync, existsSync } from "node:fs";
+import "./env.ts";
+import { readFileSync } from "node:fs";
 import { withCanon } from "./canon.ts";
+import { anthropic, MODEL, AGENT_TOOLSET } from "./constants.ts";
+import { requireIds, writeIds } from "./ids.ts";
 
-if (existsSync(".env")) process.loadEnvFile(".env");
+const ids = requireIds(["radarAgentId", "radarAgentVersion"], "run `npm run setup-radar` first.");
 
-const IDS = ".managed-agents.json";
-const ids = JSON.parse(readFileSync(IDS, "utf8"));
-if (!ids.radarAgentId) {
-  console.error("No radar agent — run `npm run setup-radar` first.");
-  process.exit(1);
-}
-
-const client = new Anthropic();
+const client = anthropic();
 
 // 1. The Sponsor Mapper sub-agent (canon's radar block = the ICP it scores against).
 if (!ids.mapperAgentId) {
   const mapper = await client.beta.agents.create({
     name: "BD Desk Sponsor Mapper",
-    model: "claude-opus-5",
+    model: MODEL,
     system: withCanon("radar", readFileSync("agents/sponsor-mapper.system.md", "utf8")),
-    tools: [{ type: "agent_toolset_20260401" }],
+    tools: [AGENT_TOOLSET],
   });
   ids.mapperAgentId = mapper.id;
   ids.mapperAgentVersion = mapper.version;
-  writeFileSync(IDS, JSON.stringify(ids, null, 2));
+  writeIds(ids);
   console.log(`mapper agent → ${mapper.id} (v${mapper.version})`);
 } else {
   console.log(`mapper agent already exists: ${ids.mapperAgentId} (v${ids.mapperAgentVersion})`);
@@ -65,5 +60,5 @@ if (ids.deploymentId) {
   console.log(`radar deployment repinned → v${ids.radarAgentVersion}`);
 }
 
-writeFileSync(IDS, JSON.stringify(ids, null, 2));
+writeIds(ids);
 console.log("\nDone. Test a delegated sweep:  npm run radar-fire");

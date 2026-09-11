@@ -15,18 +15,16 @@
 // The environment needs no change: `allow_mcp_servers` only gates `limited`
 // networking, and bd-research is `unrestricted`.
 
-import Anthropic from "@anthropic-ai/sdk";
-import { readFileSync, writeFileSync, existsSync } from "node:fs";
+import "./env.ts";
+import { readFileSync, existsSync } from "node:fs";
 import { withCanon, renderVars } from "./canon.ts";
+import { anthropic, AGENT_TOOLSET } from "./constants.ts";
+import { requireIds, writeIds } from "./ids.ts";
 
-if (existsSync(".env")) process.loadEnvFile(".env");
-
-const IDS = ".managed-agents.json";
-const ids = JSON.parse(readFileSync(IDS, "utf8"));
-if (!ids.radarAgentId || !ids.digestAgentId || !ids.vaultId) {
-  console.error("Need radar + digest agents and the vault — run setup-radar / setup-digest / setup-vault first.");
-  process.exit(1);
-}
+const ids = requireIds(
+  ["radarAgentId", "digestAgentId", "vaultId"],
+  "run setup-radar / setup-digest / setup-vault first.",
+);
 
 // CRM base url: CRM_URL env, or the crmUrl setup-vault recorded.
 const crmBase: string | undefined = process.env.CRM_URL || ids.crmUrl;
@@ -46,7 +44,7 @@ if (!mcpToken) {
   process.exit(1);
 }
 
-const client = new Anthropic();
+const client = anthropic();
 
 // 1. Vault: static_bearer for the CRM MCP endpoint (skip if one already exists).
 const existing = await client.beta.vaults.credentials.list(ids.vaultId);
@@ -100,7 +98,7 @@ for (const p of plans) {
     version: ids[p.verKey],
     system: p.system,
     mcp_servers: [MCP_SERVER],
-    tools: [{ type: "agent_toolset_20260401" }, toolset(p.tools)],
+    tools: [AGENT_TOOLSET, toolset(p.tools)],
   });
   console.log(`${p.label}: ${ids[p.idKey]}  v${ids[p.verKey]} → v${updated.version}  (mcp: ${p.tools.join(", ")})`);
   ids[p.verKey] = updated.version;
@@ -114,6 +112,6 @@ if (ids.deploymentId) {
   console.log(`radar deployment repinned → v${ids.radarAgentVersion}`);
 }
 
-writeFileSync(IDS, JSON.stringify(ids, null, 2));
+writeIds(ids);
 console.log("\nPinned .managed-agents.json to the new versions.");
 console.log("Deploy the CRM first if you haven't — the MCP tool schema changes live there.");

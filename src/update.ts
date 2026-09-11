@@ -6,26 +6,18 @@
 //   npm run update -- radar   # just the radar
 //   npm run update -- dossier # just the dossier
 
-import Anthropic from "@anthropic-ai/sdk";
-import { readFileSync, writeFileSync, existsSync } from "node:fs";
+import "./env.ts";
+import { readFileSync } from "node:fs";
 import { withCanon, renderVars, type Consumer } from "./canon.ts";
+import { anthropic } from "./constants.ts";
+import { readIds, writeIds } from "./ids.ts";
 
-// Load the repo's .env if present so ANTHROPIC_API_KEY is picked up automatically.
-try {
-  if (existsSync(".env")) process.loadEnvFile(".env");
-} catch {
-  /* optional */
-}
-
-const IDS = ".managed-agents.json";
-if (!existsSync(IDS)) {
-  console.error("No .managed-agents.json — run `npm run setup` first.");
-  process.exit(1);
-}
-const ids = JSON.parse(readFileSync(IDS, "utf8"));
+const ids = readIds();
 const which = process.argv.slice(2).join(" ").trim().toLowerCase();
+// Remember the versions the pinned references point at, so we know whether to repin.
+const before = { radar: ids.radarAgentVersion, mapper: ids.mapperAgentVersion };
 
-const client = new Anthropic();
+const client = anthropic();
 
 // name → { idKey, versionKey, systemFile, consumer }
 // `consumer` selects which brand-canon block gets prepended (null = no canon, e.g.
@@ -50,5 +42,33 @@ for (const [name, a] of Object.entries(agents)) {
   ids[a.verKey] = updated.version;
 }
 
-writeFileSync(IDS, JSON.stringify(ids, null, 2));
+// Pushing a new agent version does NOT reach references that pin an explicit version:
+// the weekly radar cron and the Sponsor Mapper roster both do. Re-point them, or a
+// prompt/canon edit never reaches Monday's scheduled sweep (it keeps running the old
+// version, silently, while radar-runs shows healthy runs the whole time).
+const mapperChanged = before.mapper !== ids.mapperAgentVersion;
+const radarChanged = before.radar !== ids.radarAgentVersion;
+
+if (mapperChanged && ids.radarAgentId && ids.mapperAgentId) {
+  // Re-seat the new mapper version on the radar's coordinator roster; this mints a new
+  // radar version too, which the cron repin below then picks up.
+  const updated = await client.beta.agents.update(ids.radarAgentId, {
+    version: ids.radarAgentVersion,
+    multiagent: {
+      type: "coordinator",
+      agents: [{ type: "agent", id: ids.mapperAgentId, version: ids.mapperAgentVersion }],
+    },
+  });
+  ids.radarAgentVersion = updated.version;
+  console.log(`roster: re-seated Sponsor Mapper v${ids.mapperAgentVersion} → radar v${ids.radarAgentVersion}`);
+}
+
+if ((radarChanged || mapperChanged) && ids.deploymentId && ids.radarAgentId) {
+  await client.beta.deployments.update(ids.deploymentId, {
+    agent: { type: "agent", id: ids.radarAgentId, version: ids.radarAgentVersion },
+  });
+  console.log(`radar cron: repinned → v${ids.radarAgentVersion}`);
+}
+
+writeIds(ids);
 console.log("Pinned .managed-agents.json to the new versions.");

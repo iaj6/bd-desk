@@ -2,27 +2,33 @@
 //
 //   RESEND_API_KEY=re_... npm run deploy-digest
 
-import Anthropic from "@anthropic-ai/sdk";
-import { readFileSync, writeFileSync } from "node:fs";
+import "./env.ts";
+import { anthropic } from "./constants.ts";
+import { requireIds, writeIds } from "./ids.ts";
 
-const IDS = ".managed-agents.json";
-const ids = JSON.parse(readFileSync(IDS, "utf8"));
-if (!ids.digestAgentId) {
-  console.error("Run `npm run setup-digest` first.");
-  process.exit(1);
-}
-if (!ids.vaultId) {
-  console.error("No vault (run setup-vault first — it holds the CRM token).");
-  process.exit(1);
-}
+const ids = requireIds(
+  ["digestAgentId", "vaultId", "environmentId"],
+  "run `npm run setup-digest` then `npm run setup-vault` first.",
+);
 
 const resendKey = process.env.RESEND_API_KEY;
 if (!resendKey) {
-  console.error("Set RESEND_API_KEY=re_... in the environment.");
+  console.error("Set RESEND_API_KEY=re_... in .env (or the environment).");
   process.exit(1);
 }
 
-const client = new Anthropic();
+const client = anthropic();
+
+// Human-readable form of a cron expression, derived from the schedule the deployment
+// actually got — so the printed line can't drift from the real cron the way a
+// hardcoded string did.
+function humanCron(expr?: string, tz?: string): string {
+  if (!expr) return "(schedule pending)";
+  const [min, hour, , , dow] = expr.split(" ");
+  const days = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+  const when = dow === "*" ? "daily" : `${days[Number(dow)] ?? dow}s`;
+  return `${when} ${String(hour).padStart(2, "0")}:${String(min).padStart(2, "0")}${tz ? ` ${tz}` : ""}`;
+}
 
 // Add the Resend key to the same vault as the CRM token (idempotent).
 try {
@@ -58,9 +64,9 @@ const deployment = await client.beta.deployments.create({
 });
 
 ids.digestDeploymentId = deployment.id;
-writeFileSync(IDS, JSON.stringify(ids, null, 2));
+writeIds(ids);
 
 console.log(`\ndeployment → ${deployment.id} (${deployment.status})`);
-console.log(`schedule   → Mondays 07:00 America/New_York`);
+console.log(`schedule   → ${humanCron(deployment.schedule?.expression, deployment.schedule?.timezone)}`);
 console.log(`next runs  → ${(deployment.schedule?.upcoming_runs_at ?? []).slice(0, 2).join("  ")}`);
 console.log(`\nTest it now:  npm run digest-fire`);

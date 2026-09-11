@@ -6,17 +6,18 @@
 //
 // Note: it does NOT create an agent — it references the one setup.ts made.
 
-import Anthropic from "@anthropic-ai/sdk";
-import { readFileSync, writeFileSync, existsSync, mkdirSync } from "node:fs";
+import "./env.ts";
+import { writeFileSync, mkdirSync } from "node:fs";
 import { defineOutcome } from "./rubrics.ts";
 import { fetchDeliverable } from "./outputs.ts";
+import { anthropic, sessionUrl } from "./constants.ts";
+import { requireIds } from "./ids.ts";
+import { TERMINAL_VERDICTS, lastVerdict, pollToTerminal } from "./session.ts";
 
-const IDS = ".managed-agents.json";
-if (!existsSync(IDS)) {
-  console.error("No .managed-agents.json — run `npm run setup` first.");
-  process.exit(1);
-}
-const { agentId, agentVersion, environmentId } = JSON.parse(readFileSync(IDS, "utf8"));
+const { agentId, agentVersion, environmentId } = requireIds(
+  ["agentId", "agentVersion", "environmentId"],
+  "run `npm run setup` first.",
+);
 
 const target = process.argv.slice(2).join(" ").trim();
 if (!target) {
@@ -24,7 +25,7 @@ if (!target) {
   process.exit(1);
 }
 
-const client = new Anthropic();
+const client = anthropic();
 
 const session = await client.beta.sessions.create({
   agent: { type: "agent", id: agentId, version: agentVersion },
@@ -33,7 +34,7 @@ const session = await client.beta.sessions.create({
 });
 console.log(`session  → ${session.id}`);
 // Watch it live in the Console instead of parsing the stream:
-console.log(`watch    → https://platform.claude.com/workspaces/default/sessions/${session.id}\n`);
+console.log(`watch    → ${sessionUrl(session.id)}\n`);
 
 // Stream-first: open the stream BEFORE sending, or you miss early events.
 // The kickoff is a GRADED outcome, not a plain message: the platform grader scores
@@ -53,12 +54,9 @@ await client.beta.sessions.events.send(session.id, {
 });
 process.stdout.write(` running after ${Math.round((Date.now() - kickoffAt) / 1000)}s\n\n`);
 
-// Terminal grader verdicts — a graded session idles TRANSIENTLY around
-// evaluation cycles, so idle only means "done" once one of these has landed.
-const TERMINAL_VERDICTS = new Set(["satisfied", "max_iterations_reached", "failed", "interrupted"]);
-
 let dossier = "";
 let verdict = "";
+let verdictResult = "";
 let verdictTerminal = false;
 
 // The live stream can drop mid-run (HTTP/2 resets, session reschedules) while the
@@ -83,6 +81,7 @@ try {
         break;
       case "span.outcome_evaluation_end":
         verdict = `${event.result} — ${event.explanation}`;
+        verdictResult = event.result;
         verdictTerminal = TERMINAL_VERDICTS.has(event.result);
         process.stdout.write(`\n  ⚖ ${event.result}: ${event.explanation}\n`);
         break;
@@ -102,19 +101,13 @@ try {
   process.stderr.write(`\n(stream dropped: ${e instanceof Error ? e.message : e} — polling to completion)\n`);
 }
 
-// Poll the session to a terminal state, then rebuild the dossier from the
-// server-side event log (authoritative, replaces the partial stream text).
-while (true) {
-  const s = await client.beta.sessions.retrieve(session.id);
-  const done =
-    s.status === "terminated" ||
-    (s.status === "idle" && (s.outcome_evaluations ?? []).every((o) => TERMINAL_VERDICTS.has(o.result)));
-  if (done) {
-    const graded = (s.outcome_evaluations ?? []).filter((o) => o.completed_at).pop();
-    if (graded) verdict = `${graded.result} — ${graded.explanation ?? ""}`;
-    break;
-  }
-  await new Promise((r) => setTimeout(r, 15_000));
+// Poll the session to a terminal state (bounded by a deadline), then rebuild the
+// dossier from the server-side event log (authoritative, replaces the partial stream).
+const s = await pollToTerminal(client, session.id);
+const v = lastVerdict(s);
+if (v) {
+  verdict = `${v.result} — ${v.explanation}`;
+  verdictResult = v.result;
 }
 dossier = "";
 for await (const ev of client.beta.sessions.events.list(session.id, { limit: 100 })) {
@@ -126,11 +119,17 @@ await finish();
 // The real deliverable is the session's output file (Files API); the streamed
 // message text is the fallback for anything that predates the file contract.
 async function finish(): Promise<never> {
-  const body = (await fetchDeliverable(client, session.id)) ?? dossier;
+  const body = ((await fetchDeliverable(client, session.id)) ?? dossier).trim();
+  if (!body) {
+    console.error(`\n\nno deliverable produced — session finished ${verdict ? `(${verdict})` : "without output"}.`);
+    process.exit(1);
+  }
   mkdirSync("dossiers", { recursive: true });
   const slug = target.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
   const path = `dossiers/${slug || "target"}.md`;
   writeFileSync(path, verdict ? `${body}\n\n---\n_grader: ${verdict}_\n` : body);
   console.log(`\n\nsaved    → ${path}`);
-  process.exit(0);
+  // Exit non-zero on a non-satisfied verdict so a `failed`/`max_iterations` run isn't
+  // read as success by a script or a skimming reader.
+  process.exit(verdictResult === "satisfied" ? 0 : 1);
 }

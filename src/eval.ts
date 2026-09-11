@@ -14,12 +14,13 @@
 // (several minutes, real tokens): run this after prompt/canon changes, not in a
 // loop.
 
-import Anthropic from "@anthropic-ai/sdk";
+import "./env.ts";
 import { readFileSync, writeFileSync, existsSync, mkdirSync } from "node:fs";
 import { defineOutcome } from "./rubrics.ts";
 import { fetchDeliverable } from "./outputs.ts";
-
-if (existsSync(".env")) process.loadEnvFile(".env");
+import { anthropic } from "./constants.ts";
+import { readIds } from "./ids.ts";
+import { TERMINAL_VERDICTS, isSessionDone } from "./session.ts";
 
 interface Task {
   id: string;
@@ -36,12 +37,7 @@ interface TaskResult {
   score: number; // (verdict score + deterministic pass ratio) / 2, in [0,1]
 }
 
-const IDS = ".managed-agents.json";
-if (!existsSync(IDS)) {
-  console.error("No .managed-agents.json — run `npm run setup` first.");
-  process.exit(1);
-}
-const ids = JSON.parse(readFileSync(IDS, "utf8"));
+const ids = readIds();
 
 const args = process.argv.slice(2);
 const pinBaseline = args.includes("--baseline");
@@ -67,8 +63,11 @@ const AGENT_ID: Record<Task["agent"], string | undefined> = {
   sponsor: ids.sponsorAgentId,
 };
 
-const client = new Anthropic();
-const TASK_TIMEOUT_MS = 25 * 60_000; // checked on event arrival — sessions emit spans steadily
+const client = anthropic();
+// Above the repo's own measured 27–34 min for a graded dossier (README note 9), so a
+// normal run isn't abandoned as a "timeout" — the old 25 min sat UNDER that ceiling,
+// which meant `--baseline` could pin a timeout as your starting point.
+const TASK_TIMEOUT_MS = 45 * 60_000;
 
 // ── deterministic checks ──────────────────────────────────────────────────
 // Conservative subset of the canon's NEVER-use list — only words that are
@@ -140,6 +139,10 @@ async function runTask(task: Task): Promise<TaskResult> {
 
   const stream = await client.beta.sessions.events.stream(session.id);
 
+  // Arm the deadline BEFORE the kickoff, so the ~100s provisioning block counts against
+  // it too — otherwise the effective window is tighter than TASK_TIMEOUT_MS suggests.
+  const deadline = Date.now() + TASK_TIMEOUT_MS;
+
   // Sending the kickoff blocks ~100s while the sandbox provisions (see dossier.ts).
   // Tasks run concurrently here, so log whole lines tagged with the task id rather
   // than writing a partial line to a stdout two tasks share.
@@ -149,19 +152,11 @@ async function runTask(task: Task): Promise<TaskResult> {
   });
   console.log(`  ${task.id} running after ${Math.round((Date.now() - kickoffAt) / 1000)}s`);
 
-  // A graded session idles TRANSIENTLY around evaluation cycles — "done" is
-  // terminated, or idle with every outcome evaluation in a terminal state.
-  const TERMINAL_OUTCOME = new Set(["satisfied", "max_iterations_reached", "failed", "interrupted"]);
-  const isDone = (s: { status: string; outcome_evaluations?: Array<{ result: string }> }) =>
-    s.status === "terminated" ||
-    (s.status === "idle" && (s.outcome_evaluations ?? []).every((o) => TERMINAL_OUTCOME.has(o.result)));
-
-  const deadline = Date.now() + TASK_TIMEOUT_MS;
   let sawTerminalVerdict = false;
   try {
     for await (const event of stream) {
       if (Date.now() > deadline) break;
-      if (event.type === "span.outcome_evaluation_end" && TERMINAL_OUTCOME.has(event.result)) sawTerminalVerdict = true;
+      if (event.type === "span.outcome_evaluation_end" && TERMINAL_VERDICTS.has(event.result)) sawTerminalVerdict = true;
       if (event.type === "session.status_terminated") break;
       if (
         event.type === "session.status_idle" &&
@@ -175,7 +170,7 @@ async function runTask(task: Task): Promise<TaskResult> {
   }
 
   let final = await client.beta.sessions.retrieve(session.id);
-  while (!isDone(final) && Date.now() < deadline) {
+  while (!isSessionDone(final) && Date.now() < deadline) {
     await sleep(15_000);
     final = await client.beta.sessions.retrieve(session.id);
   }
@@ -237,11 +232,23 @@ for (const r of results) {
   console.log(`${" ".repeat(24)} grader: ${r.explanation.slice(0, 200)}`);
 }
 const total = results.reduce((s, r) => s + r.score, 0) / (results.length || 1);
-const baseTotal = baseline
-  ? results.reduce((s, r) => s + (baseline[r.id]?.score ?? 0), 0) / (results.length || 1)
+// Compare only tasks that actually have a baseline entry, so adding a task to
+// tasks.json can't report a phantom improvement (an unbaselined task would otherwise
+// count as baseline 0 and inflate the delta).
+const scored = results.filter((r) => baseline?.[r.id]);
+const baseTotal = scored.length
+  ? scored.reduce((s, r) => s + baseline![r.id].score, 0) / scored.length
   : null;
+const mineOverScored = scored.length
+  ? scored.reduce((s, r) => s + r.score, 0) / scored.length
+  : total;
 console.log(
-  `\noverall ${total.toFixed(2)}${baseTotal !== null ? ` (baseline ${baseTotal.toFixed(2)}, Δ ${(total - baseTotal >= 0 ? "+" : "") + (total - baseTotal).toFixed(2)})` : ""}`,
+  `\noverall ${total.toFixed(2)}` +
+    (baseTotal !== null
+      ? ` (baseline ${baseTotal.toFixed(2)}, Δ ${(mineOverScored - baseTotal >= 0 ? "+" : "") + (mineOverScored - baseTotal).toFixed(2)}` +
+        (scored.length < results.length ? ` over ${scored.length}/${results.length} baselined` : "") +
+        ")"
+      : ""),
 );
 
 mkdirSync("evals/runs", { recursive: true });
@@ -251,8 +258,25 @@ writeFileSync(`evals/runs/${stamp}.json`, JSON.stringify(byId, null, 2));
 console.log(`saved → evals/runs/${stamp}.json`);
 
 if (pinBaseline) {
-  writeFileSync(BASELINE, JSON.stringify(byId, null, 2));
-  console.log(`pinned → ${BASELINE}`);
+  // A baseline is the one artifact that must never be silently wrong: refuse to pin a
+  // run that contains a timeout or an error.
+  const bad = results.filter((r) => r.verdict === "timeout" || r.verdict === "error");
+  if (bad.length) {
+    console.error(
+      `\nNot pinning: ${bad.map((r) => `${r.id} (${r.verdict})`).join(", ")}. ` +
+        "A baseline must be clean — re-run those tasks, then pin.",
+    );
+    process.exit(1);
+  }
+  // Merge, don't replace: pinning a subset (`--baseline dossier-known-red`) must not
+  // throw away the other tasks' pinned scores.
+  const merged = { ...(baseline ?? {}), ...byId };
+  writeFileSync(BASELINE, JSON.stringify(merged, null, 2));
+  console.log(`pinned → ${BASELINE} (${Object.keys(byId).length} updated, ${Object.keys(merged).length} total)`);
 } else if (!baseline) {
   console.log(`no baseline yet — pin one with:  npm run eval -- --baseline`);
 }
+
+// Exit non-zero when any task failed to produce a gradable result, so the eval can
+// gate a script or CI and a failed multi-minute run isn't read as success.
+process.exit(results.some((r) => r.verdict === "timeout" || r.verdict === "error") ? 1 : 0);

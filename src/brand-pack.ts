@@ -151,6 +151,45 @@ function compose(s: Spine) {
   return { outreach, dossier, radar, sponsor };
 }
 
+// ---------- validation ----------
+// The `as Spine` cast buys nothing at runtime, and the renderers dereference deeply
+// (proof_stories[0], icp.personas.map, …). Without this, trimming a section you don't
+// have yet crashes with an unnamed TypeError pointing into a renderer — at the first
+// setup step after the demo. Report EVERY missing/empty field at once instead.
+function validateSpine(s: unknown): string[] {
+  if (!s || typeof s !== "object") return ["(the file is empty or not valid YAML)"];
+  const spine = s as Record<string, any>;
+  const errs: string[] = [];
+  const str = (path: string, v: unknown) => { if (typeof v !== "string" || !v.trim()) errs.push(path); };
+  const arr = (path: string, v: unknown) => { if (!Array.isArray(v) || v.length === 0) errs.push(path); };
+
+  const id = spine.identity ?? {};
+  str("identity.name", id.name);
+  str("identity.abbr", id.abbr);
+  str("identity.founder", id.founder);
+  str("identity.what_we_are", id.what_we_are);
+  str("identity.offer", id.offer);
+  str("identity.one_liner_vertical", id.one_liner_vertical);
+
+  arr("positioning.differentiators", spine.positioning?.differentiators);
+
+  const v = spine.voice ?? {};
+  str("voice.summary", v.summary);
+  arr("voice.never_use", v.never_use);
+  arr("voice.words_we_use", v.words_we_use);
+
+  arr("proof_stories", spine.proof_stories);
+
+  const icp = spine.icp ?? {};
+  str("icp.summary", icp.summary);
+  arr("icp.green_signals", icp.green_signals);
+  arr("icp.red_flags", icp.red_flags);
+  arr("icp.personas", icp.personas);
+  str("icp.targeting_strategy", icp.targeting_strategy);
+
+  return errs;
+}
+
 // ---------- run ----------
 if (!existsSync(SPINE)) {
   console.error(`No brand pack at ${SPINE}.`);
@@ -159,6 +198,13 @@ if (!existsSync(SPINE)) {
 }
 
 const spine = parse(readFileSync(SPINE, "utf8")) as Spine;
+const problems = validateSpine(spine);
+if (problems.length) {
+  console.error("brand-pack.yaml is missing or has empty fields:");
+  for (const p of problems) console.error(`  - ${p}`);
+  console.error("\nFill them in — see brand/brand-pack.example.yaml for the full shape.");
+  process.exit(1);
+}
 const blocks = compose(spine);
 const pack = {
   version: spine.version,
