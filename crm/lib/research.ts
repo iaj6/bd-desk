@@ -82,7 +82,11 @@ export async function startResearch(
 export async function finalizeResearch(target: Target): Promise<Target | null> {
   if (target.dossier_status !== "running" || !target.dossier_session) return null;
 
-  if (isDemoSession(target.dossier_session)) return finalizeDemoResearch(target);
+  // Demo mode must never reach the network. Route every finalize through the canned
+  // path — including a record whose session id is not a demo session (a leftover from
+  // a real run in this .demo-data): finalizeDemoResearch treats such an id as
+  // unfinished and leaves the record inert rather than constructing an Anthropic client.
+  if (isDemo() || isDemoSession(target.dossier_session)) return finalizeDemoResearch(target);
 
   const client = new Anthropic();
   const session = await client.beta.sessions.retrieve(target.dossier_session);

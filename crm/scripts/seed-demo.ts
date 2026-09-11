@@ -52,7 +52,9 @@ async function main() {
   }
 
   console.log(`\nSeeded ${DEMO_TARGETS.length} targets into ${DIR}/.`);
-  console.log("Start the CRM with:  npm run demo");
+  console.log("Start the CRM with:  npm run demo      (port taken? PORT=3011 npm run demo)");
+  console.log("The MCP server + crons run offline too: MCP_TOKEN=demo CRON_SECRET=demo npm run demo,");
+  console.log("then use `Bearer demo` on /api/mcp and /api/cron/*.");
 }
 
 main().catch((e) => {

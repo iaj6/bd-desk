@@ -85,4 +85,8 @@ export async function proxy(req: NextRequest) {
   });
 }
 
-export const config = { matcher: ["/((?!_next/static|_next/image|favicon.ico).*)"] };
+// _next/image is deliberately NOT excluded: nothing in the app imports next/image, and
+// next.config.mjs sets images.unoptimized, so the optimizer endpoint is off. Routing any
+// stray /_next/image request through auth costs nothing and closes the one path the
+// Next image-optimization advisories touch.
+export const config = { matcher: ["/((?!_next/static|favicon.ico).*)"] };
