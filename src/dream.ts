@@ -12,19 +12,13 @@
 // — so the radar "remembers" lessons from sessions it never ran (sponsor
 // profiles included).
 
-import Anthropic from "@anthropic-ai/sdk";
-import { readFileSync, writeFileSync, existsSync } from "node:fs";
+import "./env.ts";
+import { anthropic, MODEL, MANAGED_AGENTS_BETA } from "./constants.ts";
+import { requireIds, writeIds } from "./ids.ts";
 
-if (existsSync(".env")) process.loadEnvFile(".env");
+const ids = requireIds(["memoryStoreId", "radarAgentId"], "run `npm run setup-radar` first.");
 
-const IDS = ".managed-agents.json";
-const ids = JSON.parse(readFileSync(IDS, "utf8"));
-if (!ids.memoryStoreId || !ids.radarAgentId) {
-  console.error("Radar not provisioned — run `npm run setup-radar` first.");
-  process.exit(1);
-}
-
-const client = new Anthropic();
+const client = anthropic();
 
 // Recent transcripts: radar sweeps carry sourcing lessons; sponsor profiles
 // carry portfolio knowledge the radar should not re-derive.
@@ -63,13 +57,13 @@ Consolidation rules:
 `.trim();
 
 const dream = await client.beta.dreams.create({
-  model: "claude-opus-5",
+  model: MODEL,
   inputs: [
     { type: "memory_store", memory_store_id: ids.memoryStoreId },
     ...(sessionIds.length ? [{ type: "sessions" as const, session_ids: sessionIds }] : []),
   ],
   instructions: INSTRUCTIONS,
-  betas: ["managed-agents-2026-04-01"], // joined with the SDK's default dreaming beta
+  betas: [MANAGED_AGENTS_BETA], // joined with the SDK's default dreaming beta
 });
 console.log(`dream  → ${dream.id} (${dream.status})`);
 
@@ -113,6 +107,6 @@ if (ids.deploymentId) {
   });
   console.log(`radar deployment now mounts ${newStore}`);
 }
-writeFileSync(IDS, JSON.stringify(ids, null, 2));
+writeIds(ids);
 console.log(`\nSwapped. Previous store kept as rollback: ${ids.memoryStoreIdPrevious}`);
 console.log("If the next sweeps look good, archive it in the Console (or via memoryStores.archive).");

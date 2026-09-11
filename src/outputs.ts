@@ -5,8 +5,9 @@
 
 import type Anthropic from "@anthropic-ai/sdk";
 import { DELIVERABLE_FILENAME } from "./rubrics.ts";
+import { MANAGED_AGENTS_BETA } from "./constants.ts";
 
-const BETAS = ["managed-agents-2026-04-01" as const];
+const BETAS = [MANAGED_AGENTS_BETA];
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 export async function fetchDeliverable(client: Anthropic, sessionId: string): Promise<string | null> {

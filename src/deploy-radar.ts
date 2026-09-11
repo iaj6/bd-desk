@@ -6,22 +6,17 @@
 //
 //   npm run deploy-radar
 
-import Anthropic from "@anthropic-ai/sdk";
-import { readFileSync, writeFileSync, existsSync } from "node:fs";
+import "./env.ts";
 import { defineOutcome } from "./rubrics.ts";
+import { anthropic } from "./constants.ts";
+import { requireIds, writeIds } from "./ids.ts";
 
-const IDS = ".managed-agents.json";
-if (!existsSync(IDS)) {
-  console.error("Run `npm run setup` then `npm run setup-radar` first.");
-  process.exit(1);
-}
-const ids = JSON.parse(readFileSync(IDS, "utf8"));
-if (!ids.radarAgentId || !ids.memoryStoreId) {
-  console.error("Radar not provisioned — run `npm run setup-radar`.");
-  process.exit(1);
-}
+const ids = requireIds(
+  ["radarAgentId", "memoryStoreId", "environmentId"],
+  "run `npm run setup` then `npm run setup-radar` first.",
+);
 
-const client = new Anthropic();
+const client = anthropic();
 
 // 1. Seed the worklist (idempotent — ignore "already exists" conflicts).
 async function seed(path: string, content: string) {
@@ -53,9 +48,12 @@ const SWEEP =
 // always run the current graded kickoff + rubric.
 if (ids.deploymentId) {
   const dep = await client.beta.deployments.update(ids.deploymentId, {
+    // Repin the agent version too, so re-running deploy-radar after `npm run update`
+    // is self-healing rather than leaving the weekly cron on a stale prompt.
+    agent: { type: "agent", id: ids.radarAgentId, version: ids.radarAgentVersion },
     initial_events: [defineOutcome("radar", SWEEP)],
   });
-  console.log(`\ndeployment → ${dep.id} kickoff refreshed — weekly sweeps are graded against the radar rubric.`);
+  console.log(`\ndeployment → ${dep.id} kickoff + agent version refreshed — weekly sweeps run the current prompt, graded against the radar rubric.`);
   process.exit(0);
 }
 
@@ -80,7 +78,7 @@ const deployment = await client.beta.deployments.create({
 });
 
 ids.deploymentId = deployment.id;
-writeFileSync(IDS, JSON.stringify(ids, null, 2));
+writeIds(ids);
 
 console.log(`\ndeployment → ${deployment.id}  (status: ${deployment.status})`);
 const upcoming = deployment.schedule?.upcoming_runs_at ?? [];

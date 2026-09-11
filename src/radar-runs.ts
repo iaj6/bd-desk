@@ -3,16 +3,13 @@
 //
 //   npm run radar-runs
 
-import Anthropic from "@anthropic-ai/sdk";
-import { readFileSync } from "node:fs";
+import "./env.ts";
+import { anthropic, sessionUrl } from "./constants.ts";
+import { requireIds } from "./ids.ts";
 
-const ids = JSON.parse(readFileSync(".managed-agents.json", "utf8"));
-if (!ids.deploymentId) {
-  console.error("No deployment — run `npm run deploy-radar` first.");
-  process.exit(1);
-}
+const ids = requireIds(["deploymentId"], "run `npm run deploy-radar` first.");
 
-const client = new Anthropic();
+const client = anthropic();
 const runs = await client.beta.deploymentRuns.list({ deployment_id: ids.deploymentId });
 
 console.log(`deployment ${ids.deploymentId}\n`);
@@ -22,5 +19,5 @@ for (const r of runs.data) {
   const sess = (r as any).session_id;
   const err = (r as any).error?.type;
   console.log(`${when}  [${trigger}]  ${err ? `ERROR ${err}` : sess ?? "(no session)"}`);
-  if (sess) console.log(`   https://platform.claude.com/workspaces/default/sessions/${sess}`);
+  if (sess) console.log(`   ${sessionUrl(sess)}`);
 }

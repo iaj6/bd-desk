@@ -12,16 +12,16 @@
 // Skill layout rule: each skills/<name>/ folder must contain SKILL.md whose
 // frontmatter `name` equals the folder name; every file uploads under that folder.
 
-import Anthropic, { toFile } from "@anthropic-ai/sdk";
-import { readFileSync, writeFileSync, existsSync, readdirSync } from "node:fs";
+import "./env.ts";
+import { toFile } from "@anthropic-ai/sdk";
+import { readFileSync, readdirSync } from "node:fs";
 import { join, relative } from "node:path";
 import { withCanon } from "./canon.ts";
+import { anthropic } from "./constants.ts";
+import { readIds, writeIds } from "./ids.ts";
 
-if (existsSync(".env")) process.loadEnvFile(".env");
-
-const IDS = ".managed-agents.json";
-const ids = JSON.parse(readFileSync(IDS, "utf8"));
-const client = new Anthropic();
+const ids = readIds();
+const client = anthropic();
 const BETAS = ["skills-2025-10-02" as const];
 
 // 1. Upload each skill folder (create once, then new versions).
@@ -60,7 +60,7 @@ for (const name of readdirSync("skills")) {
     ids.skills[name] = (skill as any).id;
     console.log(`skill ${name} → ${ids.skills[name]} (created)`);
   }
-  writeFileSync(IDS, JSON.stringify(ids, null, 2)); // persist as we go — a later failure must not orphan ids
+  writeIds(ids); // persist as we go — a later failure must not orphan ids
 }
 
 const ref = (name: string) => ({ type: "custom" as const, skill_id: ids.skills[name], version: "latest" });
@@ -109,5 +109,5 @@ if (ids.deploymentId) {
   console.log(`radar deployment repinned → v${ids.radarAgentVersion}`);
 }
 
-writeFileSync(IDS, JSON.stringify(ids, null, 2));
+writeIds(ids);
 console.log("\nPinned .managed-agents.json. Verify with:  npm run eval");

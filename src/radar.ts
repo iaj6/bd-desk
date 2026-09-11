@@ -4,26 +4,23 @@
 //   npm run radar                       # uses the default mission
 //   npm run radar -- "your mission"     # custom mission for this run
 
-import Anthropic from "@anthropic-ai/sdk";
-import { readFileSync, writeFileSync, existsSync, mkdirSync } from "node:fs";
+import "./env.ts";
+import { writeFileSync, mkdirSync } from "node:fs";
 import { defineOutcome } from "./rubrics.ts";
+import { anthropic, sessionUrl } from "./constants.ts";
+import { requireIds } from "./ids.ts";
+import { TERMINAL_VERDICTS, lastVerdict, pollToTerminal } from "./session.ts";
 
-const IDS = ".managed-agents.json";
-if (!existsSync(IDS)) {
-  console.error("Run `npm run setup` then `npm run setup-radar` first.");
-  process.exit(1);
-}
-const ids = JSON.parse(readFileSync(IDS, "utf8"));
-if (!ids.radarAgentId || !ids.memoryStoreId) {
-  console.error("Radar not provisioned — run `npm run setup-radar`.");
-  process.exit(1);
-}
+const ids = requireIds(
+  ["radarAgentId", "radarAgentVersion", "memoryStoreId", "environmentId"],
+  "run `npm run setup` then `npm run setup-radar` first.",
+);
 
 const DEFAULT_MISSION =
   "Find 5 net-new qualified targets not already in your memory. Use several sourcing angles.";
 const mission = process.argv.slice(2).join(" ").trim() || DEFAULT_MISSION;
 
-const client = new Anthropic();
+const client = anthropic();
 
 const session = await client.beta.sessions.create({
   agent: { type: "agent", id: ids.radarAgentId, version: ids.radarAgentVersion },
@@ -41,7 +38,7 @@ const session = await client.beta.sessions.create({
   ],
 });
 console.log(`session → ${session.id}`);
-console.log(`watch   → https://platform.claude.com/workspaces/default/sessions/${session.id}\n`);
+console.log(`watch   → ${sessionUrl(session.id)}\n`);
 console.log(`mission → ${mission}\n`);
 
 // Graded kickoff: the platform grader scores the sweep against
@@ -62,12 +59,9 @@ await client.beta.sessions.events.send(session.id, {
 });
 process.stdout.write(` running after ${Math.round((Date.now() - kickoffAt) / 1000)}s\n\n`);
 
-// Terminal grader verdicts — a graded session idles TRANSIENTLY around
-// evaluation cycles, so idle only means "done" once one of these has landed.
-const TERMINAL_VERDICTS = new Set(["satisfied", "max_iterations_reached", "failed", "interrupted"]);
-
 let out = "";
 let verdict = "";
+let verdictResult = "";
 let verdictTerminal = false;
 
 // The live stream can drop mid-run (HTTP/2 resets, session reschedules) while the
@@ -95,6 +89,7 @@ try {
         break;
       case "span.outcome_evaluation_end":
         verdict = `${event.result} — ${event.explanation}`;
+        verdictResult = event.result;
         verdictTerminal = TERMINAL_VERDICTS.has(event.result);
         process.stdout.write(`\n  ⚖ ${event.result}: ${event.explanation}\n`);
         break;
@@ -112,19 +107,13 @@ try {
   process.stderr.write(`\n(stream dropped: ${e instanceof Error ? e.message : e} — polling to completion)\n`);
 }
 
-// Poll the session to a terminal state, then rebuild the report from the
-// server-side event log (authoritative, replaces the partial stream text).
-while (true) {
-  const s = await client.beta.sessions.retrieve(session.id);
-  const done =
-    s.status === "terminated" ||
-    (s.status === "idle" && (s.outcome_evaluations ?? []).every((o) => TERMINAL_VERDICTS.has(o.result)));
-  if (done) {
-    const graded = (s.outcome_evaluations ?? []).filter((o) => o.completed_at).pop();
-    if (graded) verdict = `${graded.result} — ${graded.explanation ?? ""}`;
-    break;
-  }
-  await new Promise((r) => setTimeout(r, 15_000));
+// Poll the session to a terminal state (bounded by a deadline), then rebuild the
+// report from the server-side event log (authoritative, replaces the partial stream).
+const s = await pollToTerminal(client, session.id);
+const v = lastVerdict(s);
+if (v) {
+  verdict = `${v.result} — ${v.explanation}`;
+  verdictResult = v.result;
 }
 out = "";
 for await (const ev of client.beta.sessions.events.list(session.id, { limit: 100 })) {
@@ -134,10 +123,14 @@ for await (const ev of client.beta.sessions.events.list(session.id, { limit: 100
 finish();
 
 function finish(): never {
+  if (!out.trim()) {
+    console.error(`\n\nno report produced — session finished ${verdict ? `(${verdict})` : "without output"}.`);
+    process.exit(1);
+  }
   mkdirSync("radar-runs", { recursive: true });
   const stamp = new Date().toISOString().replace(/[:.]/g, "-");
   const path = `radar-runs/${stamp}.md`;
   writeFileSync(path, `# Mission: ${mission}\n\n${out}${verdict ? `\n\n---\n_grader: ${verdict}_\n` : ""}`);
   console.log(`\n\nshortlist → ${path}`);
-  process.exit(0);
+  process.exit(verdictResult === "satisfied" ? 0 : 1);
 }

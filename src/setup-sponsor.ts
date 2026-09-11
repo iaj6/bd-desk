@@ -2,30 +2,31 @@
 //
 //   npm run setup-sponsor
 
-import Anthropic from "@anthropic-ai/sdk";
-import { readFileSync, writeFileSync } from "node:fs";
+import "./env.ts";
+import { readFileSync } from "node:fs";
 import { withCanon } from "./canon.ts";
+import { anthropic, MODEL, AGENT_TOOLSET } from "./constants.ts";
+import { readIds, writeIds } from "./ids.ts";
 
-const IDS = ".managed-agents.json";
-const ids = JSON.parse(readFileSync(IDS, "utf8"));
+const ids = readIds();
 
 if (ids.sponsorAgentId) {
   console.log(`Sponsor agent already exists: ${ids.sponsorAgentId}. Delete the key to re-create.`);
   process.exit(0);
 }
 
-const client = new Anthropic();
+const client = anthropic();
 const system = withCanon("sponsor", readFileSync("agents/sponsor-profile.system.md", "utf8"));
 
 const agent = await client.beta.agents.create({
   name: "BD Desk Sponsor Profile",
-  model: "claude-opus-5",
+  model: MODEL,
   system,
-  tools: [{ type: "agent_toolset_20260401" }],
+  tools: [AGENT_TOOLSET],
 });
 console.log(`sponsor agent → ${agent.id} (v${agent.version})`);
 
 ids.sponsorAgentId = agent.id;
 ids.sponsorAgentVersion = agent.version;
-writeFileSync(IDS, JSON.stringify(ids, null, 2));
+writeIds(ids);
 console.log(`Saved. Add SPONSOR_AGENT_ID to the CRM env next.`);
