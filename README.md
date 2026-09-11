@@ -22,6 +22,7 @@ No API key, no Vercel account, no cloud anything:
 ```bash
 git clone https://github.com/iaj6/bd-desk && cd bd-desk/crm
 npm install && npm run demo          # http://localhost:3010
+                                     # port in use? PORT=3011 npm run demo
 ```
 
 That seeds a fictional pipeline and boots the CRM. You can open a target, run
@@ -30,6 +31,13 @@ profile and watch its portfolio auto-add new targets to the board, and export th
 whole thing to Excel. The research and drafts are **canned** — no model is called and
 nothing leaves your machine — but every path around them is the real code. Wiring it
 to real agents is [Setup](#setup), below.
+
+The demo isn't only the board. Start it with a throwaway bearer —
+`MCP_TOKEN=demo CRON_SECRET=demo npm run demo` — and the CRM's **MCP server and both
+cron routes** answer too, still on canned data with no cloud account. Point Claude Code
+at `/api/mcp` with `Bearer demo` and drive the whole pipeline over MCP, or fire the
+nightly run yourself:
+`curl -H 'authorization: Bearer demo' localhost:3010/api/cron/pipeline`.
 
 Most Managed Agents examples demo one primitive at a time. This repo composes all of
 them into one working system:

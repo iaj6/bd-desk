@@ -15,6 +15,19 @@ export function Board({ initial }: { initial: Target[] }) {
 
   const replace = (t: Target) => setTargets((ts) => ts.map((x) => (x.slug === t.slug ? t : x)));
 
+  // Pull the whole board back from the server. A finished research run can add new
+  // portco targets (addPortcos) that live only server-side; replace() only maps
+  // existing slugs, so those new rows would never appear until a manual reload.
+  // page.tsx is force-dynamic, so re-fetching /api/targets is the cheapest surface.
+  const reload = async () => {
+    try {
+      const res = await fetch("/api/targets");
+      if (res.ok) setTargets(await res.json());
+    } catch {
+      /* leave local state as-is; the next action will retry */
+    }
+  };
+
   async function quickStatus(slug: string, status: Status) {
     setTargets((ts) => ts.map((t) => (t.slug === slug ? { ...t, status } : t)));
     await fetch(`/api/targets/${slug}`, {
@@ -180,6 +193,7 @@ export function Board({ initial }: { initial: Target[] }) {
           target={open}
           onClose={() => setOpenSlug(null)}
           onSaved={replace}
+          onReload={reload}
           onDelete={() => remove(open.slug)}
         />
       )}
@@ -210,11 +224,13 @@ function Drawer({
   target,
   onClose,
   onSaved,
+  onReload,
   onDelete,
 }: {
   target: Target;
   onClose: () => void;
   onSaved: (t: Target) => void;
+  onReload: () => void;
   onDelete: () => void;
 }) {
   const [status, setStatus] = useState<Status>(target.status);
@@ -255,12 +271,14 @@ function Drawer({
         setDossier(d.dossier ?? "");
         setDstatus("done");
         onSaved({ ...target, dossier: d.dossier, dossier_status: "done", people: d.people });
+        // A sponsor profile may have auto-added portcos to the board — surface them.
+        onReload();
       } else if (d.status === "error") {
         setDstatus("error");
       }
     }, 5000);
     return () => clearInterval(id);
-  }, [dstatus, target, onSaved]);
+  }, [dstatus, target, onSaved, onReload]);
 
   async function research() {
     setDstatus("running");

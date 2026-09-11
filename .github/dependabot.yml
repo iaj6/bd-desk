@@ -7,6 +7,14 @@ updates:
     groups:
       dev-dependencies:
         dependency-type: development
+        # typescript peers against typescript-eslint's ceiling; keep it out of the
+        # group so one un-installable bump can't turn the whole group PR red.
+        exclude-patterns: ["typescript"]
+    ignore:
+      # typescript-eslint 8 peers `<6.1.0`; a bump past it fails `npm ci` (ERESOLVE).
+      # Lift this when moving to a typescript-eslint release that admits TS 6.1+/7.
+      - dependency-name: typescript
+        versions: [">=6.1.0"]
   - package-ecosystem: npm
     directory: /crm
     schedule: { interval: monthly }
@@ -14,6 +22,12 @@ updates:
     groups:
       dev-dependencies:
         dependency-type: development
+        exclude-patterns: ["typescript"]
+    ignore:
+      # Next 16's build cannot drive TypeScript 7, and typescript-eslint 8 peers
+      # `<6.1.0`; pin below that ceiling until both move.
+      - dependency-name: typescript
+        versions: [">=6.1.0"]
   - package-ecosystem: github-actions
     directory: /
     schedule: { interval: monthly }
