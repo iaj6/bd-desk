@@ -69,7 +69,7 @@ export async function upsertTarget(input: Partial<Target> & { company: string })
 
 // Human edit from the UI — only touches EDITABLE fields.
 export async function patchTarget(slug: string, fields: Partial<Target>): Promise<Target | null> {
-  const existing = await readOne(slug);
+  const existing = await readOne(slugify(slug));
   if (!existing) return null;
   const patch: Partial<Target> = {};
   for (const k of EDITABLE) if (k in fields) (patch as Record<string, unknown>)[k] = fields[k];
@@ -101,9 +101,11 @@ export async function addContentSeed(
 }
 
 export async function deleteTarget(slug: string): Promise<void> {
-  await store().remove(KEY(slug));
+  await store().remove(KEY(slugify(slug)));
 }
 
 export async function readOneBySlug(slug: string): Promise<Target | null> {
-  return readOne(slug);
+  // Re-slugify on read the same way upsert does on write, so a caller-supplied slug
+  // (e.g. `../other`) can never resolve to a different object than it wrote.
+  return readOne(slugify(slug));
 }

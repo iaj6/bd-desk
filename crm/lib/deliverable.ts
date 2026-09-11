@@ -19,11 +19,21 @@ export interface GradableSession {
   outcome_evaluations?: { result: string; completed_at?: string | null; explanation?: string | null }[] | null;
 }
 
-export function isSessionTerminal(session: GradableSession): boolean {
+export function isSessionTerminal(
+  session: GradableSession,
+  opts?: { requireEvaluation?: boolean },
+): boolean {
   if (session.status === "terminated") return true;
   if (session.status !== "idle") return false;
   if (session.stop_reason?.type === "requires_action") return false;
-  return (session.outcome_evaluations ?? []).every((o) => TERMINAL_OUTCOME.has(o.result));
+  const evals = session.outcome_evaluations ?? [];
+  // A graded kickoff (`define_outcome`) always yields at least one evaluation. An idle
+  // session with none has not been graded yet — most often the kickoff event hasn't
+  // landed (the session was just created). Callers that know the run is graded pass
+  // `requireEvaluation` so that window isn't mistaken for "done" and finalized into an
+  // empty deliverable. Ungraded sessions legitimately idle with no evaluations.
+  if (opts?.requireEvaluation && evals.length === 0) return false;
+  return evals.every((o) => TERMINAL_OUTCOME.has(o.result));
 }
 
 /** The grader's last completed verdict, or null if it never finished one. */

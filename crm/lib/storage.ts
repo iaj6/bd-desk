@@ -45,8 +45,18 @@ export const blobStore: Store = {
     });
   },
   async list(prefix) {
-    const { blobs } = await blobList({ prefix });
-    return blobs.map((b) => b.pathname);
+    // Vercel Blob's list caps at 1000 per page and signals more via hasMore/cursor.
+    // Follow the cursor to the end — otherwise the whole CRM (board, exports, digest,
+    // portco dedup) silently truncates at 1000 targets, and the demo's filesystem
+    // driver means no test or demo run could ever surface it.
+    const out: string[] = [];
+    let cursor: string | undefined;
+    do {
+      const page = await blobList({ prefix, cursor, limit: 1000 });
+      out.push(...page.blobs.map((b) => b.pathname));
+      cursor = page.hasMore ? page.cursor : undefined;
+    } while (cursor);
+    return out;
   },
   async remove(key) {
     await del(key);

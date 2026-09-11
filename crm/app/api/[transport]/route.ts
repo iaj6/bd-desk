@@ -14,7 +14,9 @@ import { draftOutreach } from "@/lib/outreach";
 import { startResearch, finalizeResearch } from "@/lib/research";
 
 export const runtime = "nodejs";
-export const maxDuration = 60;
+// crm_research starts a session and defers its ~100s kickoff to `after()`; the function
+// must stay alive long enough to finish it (README note 9).
+export const maxDuration = 300;
 
 const json = (data: unknown) => ({
   content: [{ type: "text" as const, text: JSON.stringify(data, null, 2) }],

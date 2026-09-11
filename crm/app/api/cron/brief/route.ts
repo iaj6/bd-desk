@@ -5,11 +5,12 @@ export const runtime = "nodejs";
 export const maxDuration = 300;
 export const dynamic = "force-dynamic";
 
-// Morning run (auth: CRON_SECRET bearer, enforced in middleware). Same idempotent
-// pipeline — it finalizes the research the overnight run started and drafts its
-// outreach — then emails the morning brief via Resend.
+// Morning run (auth: CRON_SECRET bearer, enforced in middleware). Runs the same
+// idempotent pipeline but WITHOUT starting new research — it finalizes the sessions the
+// overnight run started, drafts their outreach, and emails the brief. Starting research
+// here too would spend the daily RESEARCH_CAP a second time.
 export async function GET() {
-  const report = await runPipeline();
+  const report = await runPipeline({ startNewResearch: false });
 
   const to = process.env.BRIEF_EMAIL;
   const key = process.env.RESEND_API_KEY;
