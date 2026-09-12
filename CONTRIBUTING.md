@@ -36,10 +36,15 @@ CI runs exactly these, plus a job that boots demo mode with no credentials.
 - **Comments explain why.** The valuable ones here record a platform behaviour that
   cost time to learn. If you work one out, write it down — and consider adding it to
   the README's "Hard-won platform notes".
-- **The human gate is not negotiable.** Every automated path stops at a draft. A
-  change that lets the system send anything on its own will not be merged.
+- **The human gate is not negotiable.** Every *outreach* path stops at a draft — the
+  only mail the system sends is the weekly digest and morning brief, to you. A change
+  that lets it send anything to a prospect on its own will not be merged.
 - **Keep the CRM's rubric copy in sync.** `crm/lib/rubrics.ts` deliberately duplicates
   `agents/rubrics/*.md`; a test enforces it.
+- **TypeScript holds at 6.0.x.** `typescript-eslint@8` peers `<6.1.0`, so both projects
+  pin `typescript@^6.0.3` and Dependabot ignores 6.1+ until the eslint stack moves;
+  `crm/` also can't build on TypeScript 7 under Next 16. `.nvmrc` pins Node 22 to match
+  CI and `engines`.
 
 ## Reporting bugs
 

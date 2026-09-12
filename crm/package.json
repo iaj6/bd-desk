@@ -2,6 +2,15 @@
   "name": "bd-desk-crm",
   "version": "0.1.0",
   "private": true,
+  "description": "The BD Desk CRM — a Next.js pipeline board, REST API, MCP server, nightly pipeline, Vercel Blob storage, and a zero-credential demo mode.",
+  "keywords": ["crm", "nextjs", "mcp", "claude", "managed-agents", "business-development", "vercel"],
+  "repository": { "type": "git", "url": "git+https://github.com/iaj6/bd-desk.git", "directory": "crm" },
+  "bugs": { "url": "https://github.com/iaj6/bd-desk/issues" },
+  "homepage": "https://github.com/iaj6/bd-desk#readme",
+  "license": "MIT",
+  "engines": {
+    "node": ">=22"
+  },
   "scripts": {
     "dev": "next dev",
     "build": "next build",
@@ -22,7 +31,7 @@
   },
   "devDependencies": {
     "@eslint/js": "^9.39.0",
-    "@types/node": "^26.1.1",
+    "@types/node": "^22.10.0",
     "@types/react": "^19.2.17",
     "@types/react-dom": "^19.2.3",
     "eslint": "^9.39.0",
@@ -30,6 +39,5 @@
     "tsx": "^4.19.0",
     "typescript": "^6.0.3",
     "typescript-eslint": "^8.68.0"
-  },
-  "license": "MIT"
+  }
 }
