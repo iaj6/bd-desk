@@ -202,3 +202,47 @@ describe("CSRF on the operator doors", () => {
     expect(allowed(await proxy(withAuth("/api/targets", "GET", { "sec-fetch-site": "cross-site" })))).toBe(true);
   });
 });
+
+describe("bearer confinement — a door's token opens only that door", () => {
+  // All doors configured with DISTINCT secrets: the property under test is that a
+  // valid token for one door is rejected at every other. A leaked ingest bearer must
+  // not reach the MCP tools (paid research), the crons, the export, or the UI.
+  beforeEach(() => {
+    process.env.CRON_SECRET = "cron-secret";
+    process.env.MCP_TOKEN = "mcp-token";
+    process.env.INGEST_TOKEN = "ingest-token";
+    process.env.CRM_PASSWORD = "hunter2";
+  });
+
+  it("confines the ingest bearer to /api/targets and /api/brand-pack", async () => {
+    expect(allowed(await proxy(req("/api/targets", { method: "POST", auth: "Bearer ingest-token" })))).toBe(true);
+    expect(allowed(await proxy(req("/api/brand-pack", { method: "POST", auth: "Bearer ingest-token" })))).toBe(true);
+    // Opens nothing else — cron, MCP, export, or the UI root.
+    expect((await proxy(req("/api/cron/pipeline", { auth: "Bearer ingest-token" }))).status).toBe(401);
+    expect((await proxy(req("/api/mcp", { auth: "Bearer ingest-token" }))).status).toBe(401);
+    expect((await proxy(req("/api/export?format=xlsx", { auth: "Bearer ingest-token" }))).status).toBe(401);
+    expect((await proxy(req("/", { auth: "Bearer ingest-token" }))).status).toBe(401);
+  });
+
+  it("cannot fire paid research or a state-changing UI door with the ingest bearer", async () => {
+    // /api/manual is a UI POST — CSRF + Basic only; a stray bearer is not Basic creds.
+    expect((await proxy(req("/api/manual", { method: "POST", auth: "Bearer ingest-token" }))).status).toBe(401);
+    expect((await proxy(req("/api/message", { method: "POST", auth: "Bearer ingest-token" }))).status).toBe(401);
+  });
+
+  it("confines the MCP bearer to the MCP transport paths", async () => {
+    for (const p of ["/api/mcp", "/api/sse", "/api/message"]) {
+      expect(allowed(await proxy(req(p, { auth: "Bearer mcp-token" })))).toBe(true);
+    }
+    expect((await proxy(req("/api/targets", { method: "POST", auth: "Bearer mcp-token" }))).status).toBe(401);
+    expect((await proxy(req("/api/cron/pipeline", { auth: "Bearer mcp-token" }))).status).toBe(401);
+    expect((await proxy(req("/", { auth: "Bearer mcp-token" }))).status).toBe(401);
+  });
+
+  it("confines the cron bearer to /api/cron/*", async () => {
+    expect(allowed(await proxy(req("/api/cron/pipeline", { auth: "Bearer cron-secret" })))).toBe(true);
+    expect((await proxy(req("/api/mcp", { auth: "Bearer cron-secret" }))).status).toBe(401);
+    expect((await proxy(req("/api/targets", { method: "POST", auth: "Bearer cron-secret" }))).status).toBe(401);
+    expect((await proxy(req("/", { auth: "Bearer cron-secret" }))).status).toBe(401);
+  });
+});

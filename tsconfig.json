@@ -19,6 +19,9 @@
     "paths": {
       "next/server": [
         "./crm/node_modules/next/server.d.ts"
+      ],
+      "@/*": [
+        "./crm/*"
       ]
     }
   },
