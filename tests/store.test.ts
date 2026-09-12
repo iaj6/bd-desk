@@ -74,6 +74,26 @@ describe("upsertTarget", () => {
     expect(t.hq).toBe("Boulder");
   });
 
+  it("accepts agent-seeded fields on the FIRST ingest, but always opens status at new", async () => {
+    // A fresh record has no human state to protect, so the merge lets the radar seed
+    // notes and arrays — the one exception is status, which is the human's triage call
+    // and must start at "new" no matter what the agent asserts.
+    const t = await upsertTarget({
+      company: "Acme",
+      fit: "Strong",
+      why_now: "audit season",
+      green_signals: ["PE-owned", "SQF certified"],
+      sources: ["https://example.com/a"],
+      notes: "seeded by the radar", // EDITABLE, but allowed on creation
+      status: "won", // ignored on a fresh record
+    } as never);
+    expect(t.status).toBe("new");
+    expect(t.notes).toBe("seeded by the radar");
+    expect(t.green_signals).toEqual(["PE-owned", "SQF certified"]);
+    expect(t.sources).toEqual(["https://example.com/a"]);
+    expect(t.fit).toBe("Strong");
+  });
+
   it("never lets a re-send overwrite a human-edited field", async () => {
     await upsertTarget({ company: "Acme" });
     await patchTarget("acme", {
