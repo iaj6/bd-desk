@@ -44,19 +44,22 @@ nightly run yourself:
 Most Managed Agents examples demo one primitive at a time. This repo composes all of
 them into one working system:
 
-| Primitive | Where it's used here |
-|---|---|
-| Agents / Environments / Sessions / Events | four research agents + the session-driving scripts |
-| **Graded outcomes** (`user.define_outcome`) | every research run ships with a rubric; the platform grades the deliverable and sends the agent back to revise |
-| **Offline evals** with pinned baselines | `npm run eval` — platform grader + deterministic checks, deltas vs a pinned baseline |
-| **Skills** (incl. bundled executable) | output formats + sweep protocol load on demand; a bundled `validate_blocks.py` the agent runs on its own draft |
-| **MCP consumption** | agents call the CRM's own MCP server with an allowlisted toolset |
-| **Vaults** | the CRM MCP bearer injected at egress — agents never see the token |
-| **Multi-agent** (`multiagent` coordinator) | the Radar delegates per-sponsor mapping to a locked sub-agent in parallel threads |
-| **Deployments** (cron + run-on-demand) | weekly Radar sweep + weekly digest; fire any time with `radar-fire` / `digest-fire` |
-| **Memory stores** | the Radar's cross-run worklist (a BFS frontier over PE sponsors) |
-| **Dreaming** *(gated research preview)* | `npm run dream` consolidates the memory store + transcripts into a cleaner store |
-| **Files API** | deliverables written to `/mnt/session/outputs/deliverable.md` and fetched verbatim |
+| Primitive | Where it's used here | Code |
+|---|---|---|
+| Agents / Environments / Sessions / Events | four research agents + the session-driving scripts | [`src/setup.ts`](src/setup.ts), [`src/dossier.ts`](src/dossier.ts) |
+| **Graded outcomes** (`user.define_outcome`) | every research run ships with a rubric; the platform grades the deliverable and sends the agent back to revise | [`src/rubrics.ts`](src/rubrics.ts) |
+| **Offline evals** with pinned baselines | `npm run eval` — platform grader + deterministic checks, deltas vs a pinned baseline | [`src/eval.ts`](src/eval.ts) |
+| **Skills** (incl. bundled executable) | output formats + sweep protocol load on demand; a bundled `validate_blocks.py` the agent runs on its own draft | [`skills/`](skills), [`src/setup-skills.ts`](src/setup-skills.ts) |
+| **MCP consumption** | agents call the CRM's own MCP server with an allowlisted toolset | [`src/setup-mcp.ts`](src/setup-mcp.ts) |
+| **Vaults** | the CRM MCP bearer injected at egress — agents never see the token | [`src/setup-vault.ts`](src/setup-vault.ts) |
+| **Multi-agent** (`multiagent` coordinator) | the Radar delegates per-sponsor mapping to a locked sub-agent in parallel threads | [`src/setup-multiagent.ts`](src/setup-multiagent.ts) |
+| **Deployments** (cron + run-on-demand) | weekly Radar sweep + weekly digest; fire any time with `radar-fire` / `digest-fire` | [`src/deploy-radar.ts`](src/deploy-radar.ts) |
+| **Memory stores** | the Radar's cross-run worklist (a BFS frontier over PE sponsors) | [`src/setup-radar.ts`](src/setup-radar.ts) |
+| **Dreaming** *(gated research preview)* | `npm run dream` consolidates the memory store + transcripts into a cleaner store | [`src/dream.ts`](src/dream.ts) |
+| **Files API** | deliverables written to `/mnt/session/outputs/deliverable.md` and fetched verbatim | [`src/outputs.ts`](src/outputs.ts) |
+
+See **[`docs/examples/`](docs/examples)** for what these produce — a sample dossier, a
+sponsor profile (with the machine blocks the CRM ingests), and an eval scorecard.
 
 ## The system
 
@@ -98,8 +101,14 @@ This is the *real* setup — to just look around, use
 
 You need: an Anthropic API key with Managed Agents access, a Vercel account (CRM
 hosting + Blob), and optionally a [Resend](https://resend.com) key for email.
-**Cost warning:** research sessions run Claude Opus for minutes at a time. Each
-dossier/sweep/eval task is a real multi-minute agentic session.
+**Cost.** Research sessions run Claude Opus 5 for minutes at a time — a graded dossier is
+27–34 minutes of agentic work (web search plus one or more grader iterations), so each
+**dossier / sweep / eval task costs on the order of a few dollars, not cents**, at list
+prices. The nightly cron caps itself (3 research + 4 draft sessions per run), which puts
+a default install with both crons on in the **low-tens-of-dollars-per-week** range.
+Draft-only actions (outreach, the digest) are a single short call and cost cents. These
+are order-of-magnitude figures — **meter your own first few runs** before turning the
+crons loose, and keep `evals/tasks.json` short while iterating.
 
 ```bash
 npm install
@@ -134,6 +143,25 @@ npm run deploy-digest    # weekly digest cron (the CRM sends it via crm_send_dig
 
 Add the agent/environment ids from `.managed-agents.json` to the CRM's Vercel env
 (`DOSSIER_AGENT_ID`, `SPONSOR_AGENT_ID`, `ENVIRONMENT_ID`) and redeploy once.
+
+## Make it yours
+
+The example is Ridgeline Data Co. — a fictional food & beverage consultancy. To point the
+whole pipeline at your own business:
+
+1. **Edit `brand/brand-pack.yaml` — it is the only file with your vertical in it.** The
+   four agent prompts and all three rubrics are deliberately vertical-neutral; they score
+   and pitch against "the ICP in the brand canon", never a named industry. You should not
+   need to touch them. Re-run `npm run brand-pack && npm run update` to push the new canon.
+2. **`sponsor` is the hub concept.** The data model, the board's grouping, and the whole
+   Radar protocol assume your targets cluster under a PE sponsor. If yours cluster under
+   something else — an agency, a platform, a parent company — rename it, or leave it blank
+   and add targets by hand or over MCP.
+3. **If your ICP is not cluster-shaped at all,** swap `skills/bd-radar-protocol/SKILL.md`
+   for your own sourcing loop and leave everything else. The Dossier, Sponsor Profile, and
+   CRM do not care how a target reached the board.
+4. **Then check it with the evals** — put 2–3 of your own companies in `evals/tasks.json`
+   and `npm run eval` to see fit scoring on your real ICP before you trust a run.
 
 ## Daily use
 
@@ -222,6 +250,7 @@ skills/         on-demand procedure: formats, sweep protocol, machine-block
                 contracts + the validate_blocks.py the agents run on their drafts
 src/            provisioning + run scripts (setup*, deploy*, dossier, radar, eval, dream)
 evals/          tasks.json (fill with YOUR companies) + pinned baseline + runs
+docs/           board screenshot, tour gif, and examples/ (sample deliverables)
 tests/          one vitest suite over both projects — `npm test`
 crm/            Next.js CRM: pipeline board, REST API, MCP server, nightly pipeline,
                 Vercel Blob storage, morning-brief email, demo mode

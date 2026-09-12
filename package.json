@@ -4,6 +4,7 @@
   "private": true,
   "type": "module",
   "description": "An end-to-end BD pipeline on Claude Managed Agents \u2014 lead sourcing, research, drafting, and a lightweight CRM. Research-and-draft only; a human always sends.",
+  "keywords": ["claude", "managed-agents", "ai-agents", "mcp", "business-development", "sales-automation", "crm"],
   "scripts": {
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
@@ -36,7 +37,7 @@
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
-    "@types/node": "^26.5.0",
+    "@types/node": "^22.10.0",
     "eslint": "^10.10.0",
     "tsx": "^4.23.13",
     "typescript": "^6.0.3",

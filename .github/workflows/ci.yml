@@ -24,13 +24,17 @@ jobs:
     name: Root (lint · typecheck · test)
     if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name != github.repository
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
         with:
-          node-version: 22
+          node-version-file: .nvmrc
           cache: npm
-          cache-dependency-path: package-lock.json
+          # The root suite covers crm/lib too, so both lockfiles gate the cache key.
+          cache-dependency-path: |
+            package-lock.json
+            crm/package-lock.json
       - run: npm ci
       # The root suite covers crm/lib too, so crm's deps have to be present.
       - run: npm ci
@@ -43,6 +47,7 @@ jobs:
     name: CRM (lint · typecheck · build)
     if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name != github.repository
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     defaults:
       run:
         working-directory: crm
@@ -50,7 +55,7 @@ jobs:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
         with:
-          node-version: 22
+          node-version-file: .nvmrc
           cache: npm
           cache-dependency-path: crm/package-lock.json
       - run: npm ci
@@ -62,6 +67,7 @@ jobs:
     name: Demo mode boots with no credentials
     if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name != github.repository
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     defaults:
       run:
         working-directory: crm
@@ -69,21 +75,20 @@ jobs:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
         with:
-          node-version: 22
+          node-version-file: .nvmrc
           cache: npm
           cache-dependency-path: crm/package-lock.json
       - run: npm ci
       # The promise the README makes to a first-time visitor: clone, install, run —
-      # no API key, no Vercel account. Worth a job of its own, because it is the
-      # thing most likely to quietly break and the last thing anyone would notice.
-      - run: npm run seed:demo
-      - name: Boot and check the board renders
+      # no API key, no Vercel account. Run the ACTUAL `npm run demo` script (seed +
+      # boot), so the exact command the quickstart promises is the one under test.
+      - name: Boot `npm run demo` and check the board renders
         run: |
-          BD_DESK_DEMO=1 npx next dev --port 3010 > /tmp/demo.log 2>&1 &
-          for i in $(seq 1 60); do
+          npm run demo > /tmp/demo.log 2>&1 &
+          for i in $(seq 1 90); do
             if curl -sf -o /tmp/demo.html http://localhost:3010/; then break; fi
             sleep 1
           done
           grep -q "Demo mode" /tmp/demo.html || { echo "::error::demo banner missing"; cat /tmp/demo.log; exit 1; }
           grep -q "Cascade Provisions Co." /tmp/demo.html || { echo "::error::seeded targets missing"; cat /tmp/demo.log; exit 1; }
-          echo "demo mode booted and rendered the seeded board"
+          echo "npm run demo booted and rendered the seeded board"

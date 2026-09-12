@@ -1,0 +1,44 @@
+{
+  "acme-foods-strong": {
+    "id": "acme-foods-strong",
+    "verdict": "satisfied",
+    "explanation": "All seven sections present; fit call (Strong) is defensible against the ICP GREEN signals (PE-owned, SQF cert renewal, hiring analysts not data engineers); 5 sources cited; <people> block parses.",
+    "checks": {
+      "has_headings": true,
+      "people_parses": true,
+      "linkedin_real": true,
+      "sources_cited": true,
+      "never_words_absent": true,
+      "fit_is_strong": true
+    },
+    "score": 1.0
+  },
+  "beta-brands-skip": {
+    "id": "beta-brands-skip",
+    "verdict": "satisfied",
+    "explanation": "Correctly graded Skip — a pure brand company that outsources all manufacturing, so the recipe/IP wedge doesn't bite. Sections complete, reasoning honest, sources cited.",
+    "checks": {
+      "has_headings": true,
+      "people_parses": true,
+      "linkedin_real": true,
+      "sources_cited": true,
+      "never_words_absent": true,
+      "fit_is_skip": true
+    },
+    "score": 1.0
+  },
+  "gamma-capital-sponsor": {
+    "id": "gamma-capital-sponsor",
+    "verdict": "max_iterations_reached",
+    "explanation": "Portfolio enumeration thorough and the ADD flags are sound, but two portcos still lacked a source URL after two revision cycles, so the grader capped rather than satisfied.",
+    "checks": {
+      "has_headings": true,
+      "people_parses": true,
+      "linkedin_real": true,
+      "sources_cited": true,
+      "never_words_absent": true,
+      "portcos_parses": true
+    },
+    "score": 0.75
+  }
+}
