@@ -89,7 +89,9 @@ const plans = [
     idKey: "digestAgentId",
     verKey: "digestAgentVersion",
     system: renderVars(readFileSync("agents/weekly-digest.system.md", "utf8")), // no canon; resolve {{…}}
-    tools: ["crm_list_targets", "crm_get_target"],
+    // crm_send_digest sends to the server-side recipient, so the agent needs no Resend
+    // key and can't be redirected by injected text in a record.
+    tools: ["crm_list_targets", "crm_get_target", "crm_send_digest"],
   },
 ];
 

@@ -33,10 +33,5 @@ export async function getBrandPack(): Promise<BrandPack | null> {
 
 export async function putBrandPack(pack: BrandPack): Promise<void> {
   await store().write(KEY, JSON.stringify(pack));
-  cache = { pack, at: Date.now() }; // refresh cache immediately on write
-}
-
-/** Test seam — drop the in-process cache so a fresh read hits storage. */
-export function clearBrandCache(): void {
-  cache = null;
+  cache = { pack, at: Date.now() }; // refresh cache immediately on write, so no stale read after a push
 }

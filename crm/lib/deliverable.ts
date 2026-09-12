@@ -96,6 +96,13 @@ const isSubset = (a: Set<string>, b: Set<string>) => [...a].every((x) => b.has(x
 /** True when two company names are plausibly the same company. */
 export const isNameVariant = (a: Set<string>, b: Set<string>) => isSubset(a, b) || isSubset(b, a);
 
+// The primary sponsor from a sponsor string, dropping co-investors / parentheticals
+// after the first separator. Used both to group the board by sponsor and to detect a
+// contact's portfolio cluster in the drafter — one rule, so the two can't drift.
+export function primarySponsor(sponsor?: string): string {
+  return (sponsor || "").split(/[+·,(]/)[0].trim();
+}
+
 // No silent caps: the profile itself records what the auto-add did, so a fund with
 // 12 qualifying portcos never reads identically to one with 8.
 export function portcoReceipt(added: number, capped: number, cap: number): string {

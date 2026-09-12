@@ -5,9 +5,15 @@
 // lib/store.ts or lib/storage.ts instead — importing those from a client component
 // drags node builtins into the browser bundle.
 
-export type Fit = "Strong" | "Worth a look" | "Skip";
-export type Status = "new" | "researching" | "contacted" | "won" | "dead";
-export const STATUSES: Status[] = ["new", "researching", "contacted", "won", "dead"];
+// Single source of truth for the enums: derive the union from the tuple so a rename or
+// a new value is one edit, and z.enum(FITS)/z.enum(STATUSES) stay in lockstep with it.
+export const FITS = ["Strong", "Worth a look", "Skip"] as const;
+export type Fit = (typeof FITS)[number];
+export const STATUSES = ["new", "researching", "contacted", "won", "dead"] as const;
+export type Status = (typeof STATUSES)[number];
+
+// The fits the pipeline auto-acts on (researches, drafts, auto-adds) — the rest is Skip.
+export const AUTO_FITS = ["Strong", "Worth a look"] as const satisfies readonly Fit[];
 
 export interface Person {
   name: string;

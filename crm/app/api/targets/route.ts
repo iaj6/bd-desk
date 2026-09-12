@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { listTargets, upsertTarget } from "@/lib/store";
+import { TargetInput, formatZodError } from "@/lib/schema";
+import { handle, jsonBody, badRequest } from "@/lib/http";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -9,16 +11,13 @@ export async function GET() {
   return NextResponse.json(await listTargets());
 }
 
+// Agent ingest door (vaulted INGEST_TOKEN). Validates the same way the MCP door does,
+// so a malformed field can't reach storage and later 500 an export or crash the drawer.
 export async function POST(req: NextRequest) {
-  let body: any;
-  try {
-    body = await req.json();
-  } catch {
-    return NextResponse.json({ error: "invalid JSON" }, { status: 400 });
-  }
-  if (!body?.company) {
-    return NextResponse.json({ error: "company is required" }, { status: 400 });
-  }
-  const t = await upsertTarget(body);
-  return NextResponse.json({ ok: true, slug: t.slug });
+  return handle(async () => {
+    const parsed = TargetInput.safeParse(await jsonBody(req));
+    if (!parsed.success) badRequest(formatZodError(parsed.error));
+    const t = await upsertTarget(parsed.data);
+    return NextResponse.json({ ok: true, slug: t.slug });
+  });
 }

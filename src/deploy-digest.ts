@@ -1,6 +1,9 @@
-// Adds the Resend key to the vault and stands up the weekly Digest deployment.
+// Stands up the weekly Digest deployment. The digest sends via the CRM's
+// `crm_send_digest` tool (which uses the CRM's own Resend key and a fixed recipient), so
+// NO Resend credential goes into the agent's vault: the key never enters the agent
+// sandbox, and nothing web-sourced in a record can redirect the mail.
 //
-//   RESEND_API_KEY=re_... npm run deploy-digest
+//   npm run deploy-digest
 
 import "./env.ts";
 import { anthropic } from "./constants.ts";
@@ -10,12 +13,6 @@ const ids = requireIds(
   ["digestAgentId", "vaultId", "environmentId"],
   "run `npm run setup-digest` then `npm run setup-vault` first.",
 );
-
-const resendKey = process.env.RESEND_API_KEY;
-if (!resendKey) {
-  console.error("Set RESEND_API_KEY=re_... in .env (or the environment).");
-  process.exit(1);
-}
 
 const client = anthropic();
 
@@ -28,23 +25,6 @@ function humanCron(expr?: string, tz?: string): string {
   const days = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
   const when = dow === "*" ? "daily" : `${days[Number(dow)] ?? dow}s`;
   return `${when} ${String(hour).padStart(2, "0")}:${String(min).padStart(2, "0")}${tz ? ` ${tz}` : ""}`;
-}
-
-// Add the Resend key to the same vault as the CRM token (idempotent).
-try {
-  const cred = await client.beta.vaults.credentials.create(ids.vaultId, {
-    display_name: "Resend API key",
-    auth: {
-      type: "environment_variable",
-      secret_name: "RESEND_API_KEY",
-      secret_value: resendKey,
-      networking: { type: "limited", allowed_hosts: ["api.resend.com"] },
-    },
-  });
-  console.log(`resend credential → ${cred.id}`);
-} catch (e: any) {
-  if (e?.status === 409) console.log("Resend credential already exists — left as-is.");
-  else throw e;
 }
 
 if (ids.digestDeploymentId) {

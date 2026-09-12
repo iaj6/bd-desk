@@ -1,5 +1,6 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { readOneBySlug, patchTarget, listTargets, type Target } from "./store";
+import { primarySponsor } from "./deliverable";
 import { getBrandPack } from "./brand";
 import { isDemo } from "./storage";
 import { demoOutreach } from "./demo";
@@ -12,7 +13,7 @@ export type Channel = "email" | "linkedin";
 const FALLBACK_CANON = `A boutique consultancy (brand canon has not been pushed yet — run \`npm run brand-pack\` in the agents repo before trusting any draft).
 Voice: practitioner-first, direct, anti-hype. NEVER use: "leverage", "transform"/"transformative", "synergy"/"seamless", "cutting-edge"/"revolutionize"/"game-changing", "end-to-end automation".`;
 
-const sponsorKey = (s?: string) => (s || "").split(/[+·,(]/)[0].trim().toLowerCase();
+const sponsorKey = (s?: string) => primarySponsor(s).toLowerCase();
 
 function systemFor(
   channel: string,
@@ -46,6 +47,7 @@ Lead with the pattern and the proof account.`
 export async function draftOutreach(
   slug: string,
   channel: Channel,
+  all?: Target[], // the pipeline passes the list it already loaded, to avoid re-reading every blob per draft
 ): Promise<{ channel: Channel; text: string } | null> {
   const t = await readOneBySlug(slug);
   if (!t) return null;
@@ -63,7 +65,8 @@ export async function draftOutreach(
   // play and cite the portfolio. Otherwise it's a normal named-contact note.
   let cluster: Target[] = [];
   if (isContact && t.sponsor) {
-    cluster = (await listTargets()).filter(
+    const list = all ?? (await listTargets());
+    cluster = list.filter(
       (x) => x.slug !== t.slug && x.kind !== "contact" && sponsorKey(x.sponsor) === sponsorKey(t.sponsor),
     );
   }

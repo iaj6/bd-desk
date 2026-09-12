@@ -20,12 +20,16 @@ can spend your API budget.
 - **Every CRM door fails closed.** If a door's secret is unset, that door returns 401
   rather than opening — cron (`CRON_SECRET`), MCP (`MCP_TOKEN`), agent ingest
   (`INGEST_TOKEN`), and the operator UI (`CRM_PASSWORD`). With no `CRM_PASSWORD` set,
-  the CRM stays open only on a local dev server; on Vercel it returns 503 rather than
-  publishing your pipeline. This is covered by tests in `tests/proxy.test.ts`.
+  the CRM stays open only on a dev server (`next dev`); on any production host it returns
+  503 rather than publishing your pipeline. The operator doors also refuse cross-site
+  state-changing requests (CSRF). Covered by tests in `tests/proxy.test.ts`.
 - **Agent output is treated as untrusted.** It reaches spreadsheets, email, and the
   browser, so exports neutralize formula injection, the morning brief escapes every
   interpolated value, and the auto-add path whitelists fields rather than spreading
-  whatever the model emitted.
+  whatever the model emitted. The research agents are told web-page text is data, not
+  instructions; and the weekly digest sends through a `crm_send_digest` tool with a
+  server-side recipient and no mail credential in the agent, so text planted on a
+  researched page cannot redirect the email.
 
 ## If you deploy this
 

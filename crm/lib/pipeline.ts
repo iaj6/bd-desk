@@ -1,4 +1,4 @@
-import { listTargets } from "./store";
+import { listTargets, AUTO_FITS as AUTO_FIT_VALUES } from "./store";
 import { startResearch, finalizeResearch } from "./research";
 import { draftOutreach } from "./outreach";
 
@@ -17,7 +17,7 @@ import { draftOutreach } from "./outreach";
 const RESEARCH_CAP = 3; // sessions per run — each is a multi-minute cloud agent run
 const DRAFT_CAP = 4; // targets per run — 1-2 LLM calls each
 
-const AUTO_FITS = new Set(["Strong", "Worth a look"]);
+const AUTO_FITS = new Set<string>(AUTO_FIT_VALUES);
 const SKIP_STATUSES = new Set(["dead", "won"]);
 
 export interface PipelineReport {
@@ -66,7 +66,13 @@ export async function runPipeline(opts?: { startNewResearch?: boolean }): Promis
     const done: string[] = [];
     for (const channel of channels) {
       try {
-        await draftOutreach(t.slug, channel as "email" | "linkedin");
+        // Pass the already-loaded list so the drafter's cluster lookup doesn't re-read
+        // every target blob per draft.
+        const r = await draftOutreach(t.slug, channel as "email" | "linkedin", targets);
+        // Reflect the new draft on the in-memory record, so step 4's review queue lists
+        // targets drafted THIS run (not just those drafted on a previous run).
+        if (r && channel === "email") t.outreach = r.text;
+        if (r && channel === "linkedin") t.linkedin_note = r.text;
         done.push(channel);
       } catch (e) {
         report.errors.push({ slug: t.slug, step: `draft:${channel}`, message: (e as Error).message });

@@ -43,11 +43,11 @@ for (const name of readdirSync("skills")) {
     ),
   );
   if (!ids.skills[name]) {
-    // Adopt a skill that already exists under this display_title (e.g. from a
-    // partial earlier run) instead of failing on the title-uniqueness check.
+    // Adopt a skill that already exists under this display_name (e.g. from a partial
+    // earlier run), matched to the folder name, so a re-run reuses it.
     for await (const s of client.beta.skills.list({ betas: BETAS })) {
-      if ((s as any).display_title === name) {
-        ids.skills[name] = (s as any).id;
+      if (s.display_name === name) {
+        ids.skills[name] = s.id;
         break;
       }
     }
@@ -56,8 +56,8 @@ for (const name of readdirSync("skills")) {
     const v = await client.beta.skills.versions.create(ids.skills[name], { files, betas: BETAS });
     console.log(`skill ${name} → ${ids.skills[name]} (new version ${(v as any).version ?? ""})`);
   } else {
-    const skill = await client.beta.skills.create({ display_title: name, files, betas: BETAS });
-    ids.skills[name] = (skill as any).id;
+    const skill = await client.beta.skills.create({ display_name: name, files, betas: BETAS });
+    ids.skills[name] = skill.id;
     console.log(`skill ${name} → ${ids.skills[name]} (created)`);
   }
   writeIds(ids); // persist as we go — a later failure must not orphan ids
