@@ -31,7 +31,8 @@ The store is your shared brain across runs:
    delegation prompt: the sponsor name plus whatever memory already knows about it (a
    co-investor edge, a portco already carded). Do step 2's frontier refill yourself
    while the mappers work.
-   When each map returns (prose + a `sponsor_map` JSON block):
+   When each map returns (prose + a fenced JSON block — `sponsor`, `qualified`, `skips`,
+   `discovered_sponsors`):
    - Sanity-check anything that looks off — you own scoring judgment, the mapper is
      research help. Spot-verify a claim before carding it if in doubt.
    - Write a short `<company-slug>.md` card for each qualified portco (Strong /

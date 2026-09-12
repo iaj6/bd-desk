@@ -29,7 +29,11 @@ def block(text: str, tag: str):
 
 
 def main() -> int:
-    path = sys.argv[1]
+    files = [a for a in sys.argv[1:] if not a.startswith("-")]
+    if len(files) != 1:
+        print("usage: validate_blocks.py <file> [--portcos]", file=sys.stderr)
+        return 2
+    path = files[0]
     want_portcos = "--portcos" in sys.argv
     text = open(path, encoding="utf-8").read()
     errors = []

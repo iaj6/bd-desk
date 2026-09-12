@@ -40,7 +40,7 @@ await seed(
 
 const SWEEP =
   "Do your next sweep per your protocol: read _frontier.md and _done.md, refill the frontier if thin, " +
-  "pop the next 1–2 sponsors, card their qualified portcos, extend the frontier with any newly-found " +
+  "pop the next 2–3 sponsors, card their qualified portcos, extend the frontier with any newly-found " +
   "sponsors, and move mapped sponsors into _done.md. Report the net-new targets and the current frontier.";
 
 // 2. Create the weekly deployment — or refresh the existing one's kickoff in
@@ -66,7 +66,7 @@ const deployment = await client.beta.deployments.create({
   // nobody is watching for quality drift.
   initial_events: [defineOutcome("radar", SWEEP)],
   schedule: { type: "cron", expression: "0 8 * * 1", timezone: "America/New_York" }, // Mondays 8am ET
-  vault_ids: ids.vaultId ? [ids.vaultId] : undefined, // CRM ingest token, injected at egress
+  vault_ids: ids.vaultId ? [ids.vaultId] : undefined, // holds the CRM MCP bearer, injected at egress
   resources: [
     {
       type: "memory_store",

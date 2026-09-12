@@ -48,7 +48,7 @@ interface Spine {
     one_liner_public: string; one_liner_vertical: string;
     what_we_are: string; offer: string;
   };
-  positioning: { differentiators: Differentiator[] };
+  positioning: { differentiators: Differentiator[]; sponsor_play: string };
   voice: { summary: string; words_we_use: string[]; never_use: string[] };
   proof_stories: ProofStory[];
   icp: {
@@ -72,6 +72,10 @@ function rDifferentiators(s: Spine): string {
     "## Differentiators (all true — use them, don't invent new ones)",
     s.positioning.differentiators.map((d) => `- **${d.name}** — ${d.claim.trim()}`).join("\n"),
   ].join("\n");
+}
+
+function rSponsorPlay(s: Spine): string {
+  return `## Sponsor play (writing to a PE operating partner, not a single portco)\n${s.positioning.sponsor_play.trim()}`;
 }
 
 function rProof(s: Spine, full: boolean): string {
@@ -134,7 +138,7 @@ const wrap = (s: Spine, body: string) =>
 function compose(s: Spine) {
   const outreach = wrap(
     s,
-    [rIdentity(s, true), rDifferentiators(s), rProof(s, true), rPersonas(s), rVoice(s, true)].join("\n\n"),
+    [rIdentity(s, true), rDifferentiators(s), rSponsorPlay(s), rProof(s, true), rPersonas(s), rVoice(s, true)].join("\n\n"),
   );
   const dossier = wrap(
     s,
@@ -172,6 +176,7 @@ function validateSpine(s: unknown): string[] {
   str("identity.one_liner_vertical", id.one_liner_vertical);
 
   arr("positioning.differentiators", spine.positioning?.differentiators);
+  str("positioning.sponsor_play", spine.positioning?.sponsor_play);
 
   const v = spine.voice ?? {};
   str("voice.summary", v.summary);
@@ -216,6 +221,9 @@ const pack = {
     abbr: spine.identity.abbr,
     founder: spine.identity.founder,
   },
+  // The NEVER-use word list travels with the pack so the digest prompt (which gets no
+  // canon block) can render it via {{NEVER_USE}} instead of hardcoding the words.
+  never_use: spine.voice.never_use.map((w) => w.trim()).join("; "),
   blocks,
 };
 

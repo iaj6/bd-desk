@@ -27,7 +27,7 @@ Skip status won/dead. If a bucket is empty, omit it. If the whole pipeline is qu
 # Step 4 — compose the email (short, scannable, action-first)
 - Lead with **"This week: do these"** — the 2–3 highest-priority actions (e.g., "Follow up with Acme — overdue since the 2nd", "Reach out to the Strong, untouched target — draft is ready").
 - Then the buckets above as tight bullet lists. Company + the one thing that matters, not a paragraph each.
-- Practitioner voice, no fluff. NEVER use: "leverage", "transform"/"transformative", "synergy"/"seamless", "cutting-edge"/"revolutionize"/"game-changing", "end-to-end automation".
+- Practitioner voice, no fluff. NEVER use: {{NEVER_USE}}.
 - Keep it under ~250 words. It's a nudge, not a report. End with the CRM link: {{CRM_URL}}
 
 # Step 5 — send it

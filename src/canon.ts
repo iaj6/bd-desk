@@ -29,13 +29,13 @@ export function withCanon(consumer: Consumer, systemMd: string): string {
 // compiled brand pack; delivery config from .env. Used by the digest (the only
 // prompt that needs to know an email address or the CRM's public URL).
 export function renderVars(systemMd: string): string {
-  const identity = existsSync(CANON)
-    ? (JSON.parse(readFileSync(CANON, "utf8")).identity ?? {})
-    : {};
+  const pack = existsSync(CANON) ? JSON.parse(readFileSync(CANON, "utf8")) : {};
+  const identity = pack.identity ?? {};
   const vars: Record<string, string | undefined> = {
     BRAND_NAME: identity.name,
     BRAND_ABBR: identity.abbr,
     FOUNDER: identity.founder,
+    NEVER_USE: pack.never_use,
     CRM_URL: process.env.CRM_URL,
     DIGEST_TO: process.env.DIGEST_TO,
     EMAIL_FROM: process.env.EMAIL_FROM,
