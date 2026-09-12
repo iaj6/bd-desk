@@ -3,10 +3,11 @@ import { startResearch, finalizeResearch } from "./research";
 import { draftOutreach } from "./outreach";
 
 // The nightly pipeline — the "work the pipeline while you sleep" state machine.
-// Runs the steps a human would otherwise click through, bounded and idempotent:
-//   1. FINALIZE  — attach any finished research sessions (free; no LLM calls).
-//   2. RESEARCH  — start dossiers on promising un-researched targets (cap: real $ per session).
-//   3. DRAFT     — write outreach for researched targets that lack it (cap: LLM calls).
+// Runs the steps a human would otherwise click through, bounded and idempotent, in
+// THIS order (DRAFT before FINALIZE is deliberate — see the ORDER MATTERS note below):
+//   1. DRAFT     — write outreach for targets researched on a PREVIOUS run (cap: LLM calls).
+//   2. FINALIZE  — attach any finished research sessions (free; no LLM calls).
+//   3. RESEARCH  — start dossiers on promising un-researched targets (cap: real $ per session).
 //   4. FOLLOW-UPS — surface what's due, so the dates in the CRM have teeth.
 // It NEVER sends anything and NEVER touches human triage state (status). The human
 // gate stays where it belongs: judging fit and hitting send.

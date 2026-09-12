@@ -10,7 +10,9 @@ lead sourcing, company research, outreach drafting, a weekly nudge, and a lightw
 deployable CRM to run it from.
 
 One rule holds everywhere: **the system researches and drafts; a human always sends.**
-Every automated path stops at a draft, and pipeline status is never machine-written.
+Every *outreach* path stops at a draft. The only mail the system sends is the weekly
+digest and morning brief — to you, never to a prospect — and pipeline status is never
+machine-written.
 
 ![The BD Desk CRM — pipeline with fit scores, next steps, and human triage](docs/board.jpg)
 <sub>All companies shown are fictional demo data from the example brand pack.</sub>
@@ -49,11 +51,11 @@ them into one working system:
 | **Offline evals** with pinned baselines | `npm run eval` — platform grader + deterministic checks, deltas vs a pinned baseline |
 | **Skills** (incl. bundled executable) | output formats + sweep protocol load on demand; a bundled `validate_blocks.py` the agent runs on its own draft |
 | **MCP consumption** | agents call the CRM's own MCP server with an allowlisted toolset |
-| **Vaults** | Resend key + CRM MCP bearer injected at egress — agents never see secrets |
+| **Vaults** | the CRM MCP bearer injected at egress — agents never see the token |
 | **Multi-agent** (`multiagent` coordinator) | the Radar delegates per-sponsor mapping to a locked sub-agent in parallel threads |
 | **Deployments** (cron + run-on-demand) | weekly Radar sweep + weekly digest; fire any time with `radar-fire` / `digest-fire` |
 | **Memory stores** | the Radar's cross-run worklist (a BFS frontier over PE sponsors) |
-| **Dreaming** *(research preview)* | `npm run dream` consolidates the memory store + transcripts into a cleaner store |
+| **Dreaming** *(gated research preview)* | `npm run dream` consolidates the memory store + transcripts into a cleaner store |
 | **Files API** | deliverables written to `/mnt/session/outputs/deliverable.md` and fetched verbatim |
 
 ## The system
@@ -66,12 +68,12 @@ them into one working system:
                        └──────────────────────────────────────────────┘
                                             │
    weekly cron ──► OPPORTUNITY RADAR ───────┼─────────► CRM (Next.js on Vercel)
-   (graded sweep)  walks the PE-sponsor     │           kanban UI · REST · MCP server
+   (graded sweep)  walks the PE-sponsor     │           pipeline board · REST · MCP server
                    graph via a Sponsor      │           Vercel Blob storage
                    Mapper sub-agent;        │             ▲          │
                    pushes qualified targets─┘             │          │ nightly cron:
-                   over MCP                               │          │ finalize → research
-                                                          │          │ → draft → follow-ups
+                   over MCP                               │          │ draft → finalize
+                                                          │          │ → research → follow-ups
    button / CLI ─► DOSSIER / SPONSOR PROFILE ─────────────┘          │
    (graded runs)   researches the live web, writes                   ▼
                    deliverable.md + machine-readable         outreach DRAFTS
@@ -127,7 +129,7 @@ npm run brand-pack       # now push the canon to the CRM too
 
 # 4. Crons
 npm run deploy-radar     # weekly sweep (Mondays 8am ET — edit in the script)
-npm run deploy-digest    # weekly digest (needs RESEND_API_KEY)
+npm run deploy-digest    # weekly digest cron (the CRM sends it via crm_send_digest — set RESEND_API_KEY + BRIEF_EMAIL in the CRM env)
 ```
 
 Add the agent/environment ids from `.managed-agents.json` to the CRM's Vercel env
@@ -137,7 +139,7 @@ Add the agent/environment ids from `.managed-agents.json` to the CRM's Vercel en
 
 ![Tour: open a target's drawer — why-now, signals, key people, the dossier, and the outreach draft — then group the pipeline by sponsor](docs/bd-desk-tour.gif)
 
-- **CRM** — the kanban board at your Vercel URL. A Research button starts a graded
+- **CRM** — the pipeline board at your Vercel URL. A Research button starts a graded
   dossier/sponsor session; the pipeline's nightly cron finalizes finished research,
   researches promising untouched targets (capped), drafts missing outreach, and
   surfaces due follow-ups. The grader's verdict lands on each target. Your data
@@ -146,11 +148,14 @@ Add the agent/environment ids from `.managed-agents.json` to the CRM's Vercel en
   rolodex CSV (one row per contact), or any single target as
   a markdown brief (`/api/export`, buttons in the UI).
 - **CLI** — `npm run dossier -- "Some Company"`, `npm run radar`, `npm run radar-fire`
-  (fires the deployment now and tails it, grading verdicts included).
+  (fires the deployment now and tails it, grading verdicts included). `npm run radar-runs`
+  lists what the weekly cron has produced; after editing a prompt or the canon,
+  `npm run update` re-pushes it to the agents and repins the weekly cron.
 - **MCP** — the CRM is an MCP server (`/api/mcp`, bearer `MCP_TOKEN`). Wire it into
   Claude Code and drive the pipeline conversationally (`crm_list_targets`,
   `crm_research`, `crm_draft_outreach`, …). The agents themselves use an allowlisted
-  subset of the same server.
+  subset of the same server. `crm_capture_seed` is the reverse-flywheel hook — flag a
+  post-worthy observation from a real account onto a target, to turn into content later.
 
 ## Eval-driven iteration
 
@@ -218,7 +223,7 @@ skills/         on-demand procedure: formats, sweep protocol, machine-block
 src/            provisioning + run scripts (setup*, deploy*, dossier, radar, eval, dream)
 evals/          tasks.json (fill with YOUR companies) + pinned baseline + runs
 tests/          one vitest suite over both projects — `npm test`
-crm/            Next.js CRM: kanban UI, REST API, MCP server, nightly pipeline,
+crm/            Next.js CRM: pipeline board, REST API, MCP server, nightly pipeline,
                 Vercel Blob storage, morning-brief email, demo mode
 ```
 
@@ -236,6 +241,23 @@ cd crm && npm run lint && npm run typecheck && npm run build
 CI runs all of the above on every push, plus a job that boots demo mode with no
 credentials — the promise the quickstart above makes is the one most likely to break
 silently. See [CONTRIBUTING.md](CONTRIBUTING.md).
+
+## Known limitations
+
+Honest about the edges, so nothing surprises you after you deploy:
+
+- **Beta platform.** Managed Agents is beta; the API can move. The SDK is pinned and the
+  "hard-won notes" above are dated — expect to re-check them when the surface changes.
+- **Single-operator auth.** The CRM is one shared Basic-Auth password — no accounts,
+  roles, or audit log. Right for a solo BD desk, not a team; put it behind your own SSO
+  if more than one person needs it.
+- **Cost is real and unmetered here.** Research runs Claude Opus for minutes (a graded
+  dossier is 27–34 min). There is no per-run spend cap beyond the pipeline's session
+  caps — watch your usage.
+- **Dreaming is a gated research preview** — `npm run dream` 404s until your org is
+  opted in.
+- **Beta grader / Files API.** A deliverable that never writes its output file falls
+  back to the message log; a graded verdict can lag a few seconds behind idle.
 
 ## Status
 

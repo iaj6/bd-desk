@@ -26,7 +26,7 @@ const session = await client.beta.sessions.create({
   agent: { type: "agent", id: ids.radarAgentId, version: ids.radarAgentVersion },
   environment_id: ids.environmentId,
   title: `Radar: ${mission.slice(0, 60)}`,
-  vault_ids: ids.vaultId ? [ids.vaultId] : undefined, // CRM ingest token (egress injection)
+  vault_ids: ids.vaultId ? [ids.vaultId] : undefined, // holds the CRM MCP bearer (crm_add_target), injected at egress
   resources: [
     {
       type: "memory_store",

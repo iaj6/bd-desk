@@ -23,10 +23,9 @@ function systemFor(
 ) {
   const audience = sponsorContact
     ? `The recipient is a PARTNER at the PE sponsor that owns the portfolio listed below — NOT a portco buyer.
-Do not pitch a single-company solution. Pitch the REPEATABLE PATTERN across their portfolio:
-you run in-their-cloud AI + operational-data for exactly this profile, and it templates
-across their book. Cite 1–2 of THEIR OWN portcos by name (from the portfolio list) as proof you know the book.
-Lead with the pattern and the proof account.`
+Do not pitch a single-company solution. Follow the SPONSOR PLAY in the canon above: pitch the repeatable
+pattern across their portfolio, and cite 1–2 of THEIR OWN portcos by name (from the portfolio list) as proof
+you know the book. Lead with the pattern and the proof account.`
     : `Ground the message in the specific researched trigger; lead with a real fact, not flattery.`;
 
   if (channel === "linkedin") {
