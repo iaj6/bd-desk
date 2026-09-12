@@ -18,12 +18,17 @@ export async function GET() {
   if (to && key) {
     const crmUrl = process.env.CRM_PUBLIC_URL ?? "";
     const { subject, html } = renderBrief(report, crmUrl);
-    const res = await fetch("https://api.resend.com/emails", {
-      method: "POST",
-      headers: { authorization: `Bearer ${key}`, "content-type": "application/json" },
-      body: JSON.stringify({ from: process.env.EMAIL_FROM ?? "BD Desk <onboarding@resend.dev>", to: [to], subject, html }),
-    });
-    email = res.ok ? `sent: ${((await res.json()) as { id?: string }).id}` : `failed: ${res.status} ${await res.text()}`;
+    try {
+      const res = await fetch("https://api.resend.com/emails", {
+        method: "POST",
+        headers: { authorization: `Bearer ${key}`, "content-type": "application/json" },
+        body: JSON.stringify({ from: process.env.EMAIL_FROM ?? "BD Desk <onboarding@resend.dev>", to: [to], subject, html }),
+      });
+      email = res.ok ? `sent: ${((await res.json()) as { id?: string }).id}` : `failed: ${res.status} ${await res.text()}`;
+    } catch (e) {
+      // The pipeline's work already landed; a Resend outage must not fail the whole run.
+      email = `failed: ${(e as Error).message}`;
+    }
   }
 
   return NextResponse.json({ ...report, email });

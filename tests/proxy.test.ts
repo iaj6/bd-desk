@@ -7,7 +7,7 @@ import { proxy } from "../crm/proxy.ts";
 // most is that every door FAILS CLOSED when its secret is unset — an unconfigured
 // deploy must lock, never open.
 
-const ENV_KEYS = ["CRON_SECRET", "MCP_TOKEN", "INGEST_TOKEN", "CRM_PASSWORD", "VERCEL"] as const;
+const ENV_KEYS = ["CRON_SECRET", "MCP_TOKEN", "INGEST_TOKEN", "CRM_PASSWORD", "VERCEL", "NODE_ENV"] as const;
 const saved: Record<string, string | undefined> = {};
 
 beforeEach(() => {
@@ -157,10 +157,48 @@ describe("unconfigured password", () => {
     expect(allowed(await proxy(req("/")))).toBe(true);
   });
 
-  it("locks the CRM on Vercel rather than silently publishing it", async () => {
-    process.env.VERCEL = "1";
+  it("locks the CRM on any production host rather than silently publishing it", async () => {
+    // The gate is NODE_ENV, not VERCEL — so a non-Vercel production host (Docker, Fly,
+    // a VPS running `next start`) locks too, instead of failing open.
+    process.env.NODE_ENV = "production";
     const res = await proxy(req("/"));
     expect(res.status).toBe(503);
     expect(await res.text()).toContain("CRM_PASSWORD");
+  });
+
+  it("locks a production host even when VERCEL is unset (the case the old check missed)", async () => {
+    process.env.NODE_ENV = "production";
+    delete process.env.VERCEL;
+    expect((await proxy(req("/"))).status).toBe(503);
+  });
+});
+
+describe("CSRF on the operator doors", () => {
+  beforeEach(() => { process.env.CRM_PASSWORD = "hunter2"; });
+
+  const withAuth = (path: string, method: string, headers: Record<string, string>) =>
+    new NextRequest(`https://crm.example${path}`, {
+      method,
+      headers: { authorization: basic("me", "hunter2"), ...headers },
+    });
+
+  it("refuses a state-changing request from a cross-site Sec-Fetch-Site", async () => {
+    const res = await proxy(withAuth("/api/targets/acme", "PATCH", { "sec-fetch-site": "cross-site" }));
+    expect(res.status).toBe(403);
+  });
+
+  it("refuses a state-changing request from a foreign Origin", async () => {
+    const res = await proxy(withAuth("/api/manual", "POST", { origin: "https://evil.example" }));
+    expect(res.status).toBe(403);
+  });
+
+  it("allows a same-origin state-changing request", async () => {
+    expect(allowed(await proxy(withAuth("/api/manual", "POST", { "sec-fetch-site": "same-origin" })))).toBe(true);
+    expect(allowed(await proxy(withAuth("/api/manual", "POST", { origin: "https://crm.example" })))).toBe(true);
+  });
+
+  it("allows a header-less request (curl / the operator's own tools) and never gates GET", async () => {
+    expect(allowed(await proxy(withAuth("/api/manual", "POST", {})))).toBe(true);
+    expect(allowed(await proxy(withAuth("/api/targets", "GET", { "sec-fetch-site": "cross-site" })))).toBe(true);
   });
 });

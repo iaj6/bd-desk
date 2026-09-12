@@ -1,6 +1,6 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { after } from "next/server";
-import { readOneBySlug, patchTarget, upsertTarget, listTargets, slugify, type Target } from "./store";
+import { readOneBySlug, patchTarget, upsertTarget, listTargets, slugify, AUTO_FITS, type Target } from "./store";
 import { defineOutcome, DELIVERABLE_FILENAME } from "./rubrics";
 import {
   isSessionTerminal, lastVerdict, trimToDeliverable, extractBlock, parsePeople,
@@ -197,7 +197,7 @@ async function finalizeDemoResearch(target: Target): Promise<Target | null> {
 }
 
 const PORTCO_CAP = 8; // per sponsor profile — quality over count
-const PORTCO_FITS = new Set(["Strong", "Worth a look"]);
+const PORTCO_FITS = new Set<string>(AUTO_FITS);
 
 // Returns the add/drop tally so the caller can receipt it — qualified portcos past
 // the cap are counted, never silently discarded.

@@ -59,11 +59,33 @@ export async function proxy(req: NextRequest) {
     // GET without the bearer falls through to Basic Auth (browser/curl).
   }
 
+  // CSRF: a browser replays cached Basic-Auth creds on cross-site requests (SameSite
+  // does not cover HTTP auth), so a page the operator visits could fire paid research or
+  // overwrite drafts. Reject a state-changing request that carries a cross-site signal.
+  // Absent headers (curl, the operator's own tools) are allowed; a forced cross-site
+  // browser request always sends Origin or Sec-Fetch-Site. The bearer doors above are
+  // exempt — they are not browser-driven.
+  if (req.method !== "GET" && req.method !== "HEAD" && req.method !== "OPTIONS") {
+    const site = req.headers.get("sec-fetch-site");
+    const origin = req.headers.get("origin");
+    let crossSite = site !== null && site !== "same-origin" && site !== "none";
+    if (origin) {
+      try {
+        crossSite ||= new URL(origin).origin !== req.nextUrl.origin;
+      } catch {
+        crossSite = true;
+      }
+    }
+    if (crossSite) return new NextResponse("cross-site request refused", { status: 403 });
+  }
+
   const pass = process.env.CRM_PASSWORD;
   if (!pass) {
-    // No password configured: open ONLY on a local dev server. On Vercel this
-    // locks the CRM instead of silently publishing it (and its research budget).
-    if (!process.env.VERCEL) return NextResponse.next();
+    // No password configured: open ONLY on a dev server (`next dev` sets
+    // NODE_ENV=development). Any production host — Vercel, but also Docker / Fly /
+    // Railway / a VPS running `next start` — locks instead of silently publishing the
+    // CRM and its research budget. (Keying on VERCEL alone missed every non-Vercel host.)
+    if (process.env.NODE_ENV !== "production") return NextResponse.next();
     return new NextResponse("CRM_PASSWORD is not configured — set it in the project's env vars", {
       status: 503,
     });
