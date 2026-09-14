@@ -14,8 +14,7 @@ Every *outreach* path stops at a draft. The only mail the system sends is the we
 digest and morning brief — to you, never to a prospect — and pipeline status is never
 machine-written.
 
-![The BD Desk CRM — pipeline with fit scores, next steps, and human triage](docs/board.jpg)
-<sub>All companies shown are fictional demo data from the example brand pack.</sub>
+![BD Desk — an end-to-end BD pipeline on Claude Managed Agents: source, research, and draft, with a human always sending](docs/social-preview.png)
 
 ## Try it in 30 seconds
 
@@ -33,6 +32,9 @@ profile and watch its portfolio auto-add new targets to the board, and export th
 whole thing to Excel. The research and drafts are **canned** — no model is called and
 nothing leaves your machine — but every path around them is the real code. Wiring it
 to real agents is [Setup](#setup), below.
+
+![The BD Desk CRM — the demo pipeline with fit scores, next steps, and human triage](docs/board.jpg)
+<sub>All companies shown are fictional demo data from the example brand pack.</sub>
 
 The demo isn't only the board. Start it with a throwaway bearer —
 `MCP_TOKEN=demo CRON_SECRET=demo npm run demo` — and the CRM's **MCP server and both
@@ -250,7 +252,7 @@ skills/         on-demand procedure: formats, sweep protocol, machine-block
                 contracts + the validate_blocks.py the agents run on their drafts
 src/            provisioning + run scripts (setup*, deploy*, dossier, radar, eval, dream)
 evals/          tasks.json (fill with YOUR companies) + pinned baseline + runs
-docs/           board screenshot, tour gif, and examples/ (sample deliverables)
+docs/           architecture diagram, board screenshot, tour gif, and examples/ (sample deliverables)
 tests/          one vitest suite over both projects — `npm test`
 crm/            Next.js CRM: pipeline board, REST API, MCP server, nightly pipeline,
                 Vercel Blob storage, morning-brief email, demo mode

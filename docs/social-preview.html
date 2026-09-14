@@ -1,0 +1,139 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700;12..96,800&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500&display=swap">
+<style>
+  :root{
+    --bg:#0b0d0f; --panel:#14181c; --panel2:#1a2026; --line:#232a31; --line2:#30383f;
+    --text:#e9eef3; --muted:#8b98a5; --faint:#5c6974;
+    --agent:#8A4FFF;      /* Claude Managed Agents */
+    --crm:#58a6ff;        /* the CRM */
+    --send:#3fb950;       /* the human send gate */
+    --display:"Bricolage Grotesque","Helvetica Neue",Arial,sans-serif;
+    --body:"IBM Plex Sans","Segoe UI",system-ui,sans-serif;
+    --mono:"IBM Plex Mono",ui-monospace,Menlo,monospace;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  html,body{background:#000;}
+  .card{
+    position:relative; width:1280px; height:640px; overflow:hidden;
+    background:
+      radial-gradient(1100px 520px at 82% -8%, rgba(138,79,255,.16), transparent 60%),
+      radial-gradient(900px 520px at 8% 118%, rgba(88,166,255,.12), transparent 60%),
+      var(--bg);
+    color:var(--text); font-family:var(--body);
+    padding:56px 60px 48px;
+    display:flex; flex-direction:column;
+  }
+  /* faint grid texture */
+  .card::before{
+    content:""; position:absolute; inset:0;
+    background-image:linear-gradient(var(--line) 1px,transparent 1px),linear-gradient(90deg,var(--line) 1px,transparent 1px);
+    background-size:48px 48px; opacity:.12; mask-image:linear-gradient(180deg,transparent,#000 30%,#000 70%,transparent);
+  }
+  .card>*{position:relative;}
+
+  header{display:flex; align-items:flex-start; justify-content:space-between; gap:24px;}
+  .brand .eyebrow{font-family:var(--mono); font-size:15px; letter-spacing:.16em; text-transform:uppercase; color:var(--agent); font-weight:600;}
+  .brand h1{font-family:var(--display); font-weight:800; font-size:68px; line-height:.98; letter-spacing:-.02em; margin-top:8px;}
+  .brand p{color:var(--muted); font-size:20px; margin-top:12px; max-width:52ch;}
+  .brand p b{color:var(--text); font-weight:500;}
+
+  .gate-pill{flex:none; display:flex; align-items:center; gap:10px; margin-top:6px;
+    border:1px solid color-mix(in srgb,var(--send) 55%,transparent);
+    background:color-mix(in srgb,var(--send) 14%,transparent);
+    color:#c7f0cf; border-radius:999px; padding:11px 18px 11px 14px; font-family:var(--mono); font-size:14.5px; font-weight:500; white-space:nowrap;}
+  .gate-pill .tick{width:22px;height:22px;border-radius:50%;background:var(--send);display:grid;place-items:center;flex:none;}
+  .gate-pill .tick svg{width:13px;height:13px;}
+
+  /* pipeline */
+  .flow{margin-top:44px; display:grid; grid-template-columns:1fr auto 1fr auto 1fr auto 1fr; align-items:stretch; gap:0;}
+  .node{background:var(--panel); border:1px solid var(--line); border-top:3px solid var(--c,var(--line2)); border-radius:14px; padding:20px 20px 18px; min-height:150px; display:flex; flex-direction:column; box-shadow:0 1px 0 rgba(0,0,0,.5);}
+  .node .kick{font-family:var(--mono); font-size:12.5px; letter-spacing:.12em; text-transform:uppercase; color:var(--c,var(--muted)); font-weight:600;}
+  .node .name{font-family:var(--display); font-weight:700; font-size:24px; line-height:1.05; margin-top:12px; letter-spacing:-.01em;}
+  .node .desc{color:var(--muted); font-size:15.5px; line-height:1.4; margin-top:10px;}
+  .node.send{background:color-mix(in srgb,var(--send) 12%,var(--panel)); border-color:color-mix(in srgb,var(--send) 45%,transparent); border-top-color:var(--send);}
+  .node.send .name{display:flex; align-items:center; gap:10px;}
+  .node.send .badge{width:30px;height:30px;border-radius:8px;background:var(--send);display:grid;place-items:center;flex:none;}
+  .node.send .badge svg{width:17px;height:17px;}
+
+  .arrow{display:flex; align-items:center; justify-content:center; width:42px; color:var(--faint);}
+  .arrow svg{width:26px;height:26px;}
+
+  /* loop caption */
+  .loop{margin-top:20px; display:flex; align-items:center; gap:12px; color:var(--muted); font-size:15px;}
+  .loop .curve{color:var(--crm); flex:none;}
+  .loop b{color:var(--text); font-weight:500;}
+
+  /* footer lanes */
+  .lanes{margin-top:auto; display:flex; gap:14px; padding-top:22px;}
+  .lane{flex:1; display:flex; align-items:center; gap:12px; border:1px solid var(--line); border-radius:11px; background:var(--panel); padding:14px 16px;}
+  .lane .dot{width:11px;height:11px;border-radius:50%;background:var(--c);flex:none; box-shadow:0 0 0 4px color-mix(in srgb,var(--c) 18%,transparent);}
+  .lane .txt strong{font-family:var(--display); font-weight:700; font-size:16px; letter-spacing:-.01em;}
+  .lane .txt span{display:block; font-family:var(--mono); font-size:12.5px; color:var(--muted); margin-top:4px; letter-spacing:.01em;}
+</style>
+</head>
+<body>
+  <div class="card">
+    <header>
+      <div class="brand">
+        <div class="eyebrow">Built on Claude Managed Agents</div>
+        <h1>BD&nbsp;Desk</h1>
+        <p>An end-to-end business-development pipeline: <b>source, research, and draft</b> — with a lightweight CRM.</p>
+      </div>
+      <div class="gate-pill">
+        <span class="tick"><svg viewBox="0 0 24 24" fill="none" stroke="#0b0d0f" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></span>
+        Research &amp; draft only — a human always sends
+      </div>
+    </header>
+
+    <div class="flow">
+      <div class="node" style="--c:var(--agent)">
+        <div class="kick">Agent · Radar</div>
+        <div class="name">Source</div>
+        <div class="desc">The Opportunity Radar surfaces qualified leads nightly.</div>
+      </div>
+      <div class="arrow"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></div>
+
+      <div class="node" style="--c:var(--agent)">
+        <div class="kick">Agent · Dossier</div>
+        <div class="name">Research</div>
+        <div class="desc">A graded session builds the brief and pulls the key people.</div>
+      </div>
+      <div class="arrow"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></div>
+
+      <div class="node" style="--c:var(--crm)">
+        <div class="kick">CRM · Drafter</div>
+        <div class="name">Draft</div>
+        <div class="desc">Outreach written in your brand voice — email and LinkedIn.</div>
+      </div>
+      <div class="arrow"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></div>
+
+      <div class="node send">
+        <div class="kick" style="--c:var(--send)">You</div>
+        <div class="name"><span class="badge"><svg viewBox="0 0 24 24" fill="none" stroke="#0b0d0f" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2 11 13M22 2l-7 20-4-9-9-4Z"/></svg></span>Send</div>
+        <div class="desc">You read the draft and hit send. Nothing leaves on its own.</div>
+      </div>
+    </div>
+
+    <div class="loop">
+      <span class="curve"><svg width="30" height="24" viewBox="0 0 30 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M27 4v6a6 6 0 0 1-6 6H4"/><path d="M8 12l-5 4 5 4"/></svg></span>
+      <span>The Sponsor Mapper profiles a PE owner and <b>auto-adds its portfolio</b> back into the pipeline — the flywheel refills itself.</span>
+    </div>
+
+    <div class="lanes">
+      <div class="lane" style="--c:var(--agent)">
+        <span class="dot"></span>
+        <div class="txt"><strong>Claude Managed Agents</strong><span>graded outcomes · sessions · vault · memory · skills</span></div>
+      </div>
+      <div class="lane" style="--c:var(--crm)">
+        <span class="dot"></span>
+        <div class="txt"><strong>CRM</strong><span>Next.js · Vercel Blob · MCP server · zero-credential demo</span></div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>
