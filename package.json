@@ -37,12 +37,12 @@
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
-    "@types/node": "^22.10.0",
-    "eslint": "^10.10.0",
-    "tsx": "^4.23.13",
+    "@types/node": "^26.6.3",
+    "eslint": "^10.11.0",
+    "tsx": "^4.23.15",
     "typescript": "^6.0.3",
-    "typescript-eslint": "^8.70.0",
-    "vitest": "^5.0.0"
+    "typescript-eslint": "^8.71.0",
+    "vitest": "^5.0.2"
   },
   "license": "MIT",
   "repository": {
